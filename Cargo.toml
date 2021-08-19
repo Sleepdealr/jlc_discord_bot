@@ -1,0 +1,22 @@
+[package]
+name = "jlc_discord_bot"
+version = "0.1.0"
+authors = ["Sleepdealer <dreznik01@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+sys-info = "0.7"
+chrono = "0.4"
+reqwest = { version = "0.11", features = ["json"] }
+serde_json = "*"
+
+[dependencies.serenity]
+version = "0.10.9"
+branch = "current"
+git = "https://github.com/serenity-rs/serenity.git"
+features = ["framework", "standard_framework", "rustls_backend"]
+
+[dependencies.tokio]
+version = "1.0"
+features = ["macros", "rt-multi-thread"]

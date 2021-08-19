@@ -1,0 +1,14 @@
+{
+  "components" : [
+    {
+      "name": "Atmega32u4-MU",
+      "lcsc": "C112161",
+      "channel" : "877779984448638976"
+    },
+    {
+      "name": "Atmega32u4-AU",
+      "lcsc": "C44854",
+      "channel" : "877779984448638976"
+    }
+  ]
+}
