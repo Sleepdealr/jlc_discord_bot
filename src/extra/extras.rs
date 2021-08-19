@@ -55,6 +55,8 @@ async fn set_slow_mode(ctx: &Context, msg: &Message, mut args: Args) -> CommandR
     Ok(())
 }
 
+
+use sys_info::mem_info;
 async fn log_system_load(ctx: Arc<Context>) -> CommandResult {
     let cpu_load = sys_info::loadavg().unwrap();
     let mem_use = sys_info::mem_info().unwrap();
@@ -84,7 +86,7 @@ async fn log_system_load(ctx: Arc<Context>) -> CommandResult {
     };
     Ok(())
 }
-
+use chrono::offset::Utc;
 async fn set_status_to_current_time(ctx: Arc<Context>) {
     let current_time = Utc::now();
     let formatted_time = current_time.to_rfc2822();

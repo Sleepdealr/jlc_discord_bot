@@ -16,51 +16,38 @@
 // TODO: Logs (Future)
 //  - Log lifetime usages?
 
-
 use std::{
     collections::{HashMap, HashSet},
     env,
     fmt::Write,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc
+        Arc,
     },
-    time::Duration
+    time::Duration,
 };
 
-use chrono::offset::Utc;
 use serenity::{
     async_trait,
-    client::bridge::gateway::{ShardManager},
+    client::bridge::gateway::ShardManager,
     framework::standard::{
         help_commands,
         macros::{check, command, group, help, hook},
-        Args,
-        CommandGroup,
-        CommandOptions,
-        CommandResult,
-        DispatchError,
-        HelpOptions,
-        Reason,
+        Args, CommandGroup, CommandOptions, CommandResult, DispatchError, HelpOptions, Reason,
         StandardFramework,
     },
     http::Http,
     model::{
-        channel::{Message},
-        gateway::{Activity , Ready},
-        id::{UserId , ChannelId , GuildId},
-
+        channel::Message,
+        gateway::{Ready},
+        id::{ChannelId, GuildId, UserId},
     },
-    utils::{content_safe, ContentSafeOptions},
     prelude::*,
-
+    utils::{content_safe, ContentSafeOptions},
 };
+use tokio::sync::{Mutex};
 
-use tokio::sync::Mutex;
 
-// A container type is created for inserting into the Client's `data`, which
-// allows for data to be accessible across all events and framework commands, or
-// anywhere else that has a copy of the `data` Arc.
 struct ShardManagerContainer;
 
 impl TypeMapKey for ShardManagerContainer {
@@ -77,25 +64,33 @@ struct Handler {
     is_loop_running: AtomicBool,
 }
 
+struct BotCtl;
+
+impl TypeMapKey for BotCtl {
+    type Value = AtomicBool;
+}
+
 #[async_trait]
 impl EventHandler for Handler {
     async fn cache_ready(&self, ctx: Context, _guilds: Vec<GuildId>) {
         println!("Cache built successfully!");
-
         let ctx = Arc::new(ctx);
-
         if !self.is_loop_running.load(Ordering::Relaxed) {
             let ctx1 = Arc::clone(&ctx);
-            if self.enable_bot {
                 tokio::spawn(async move {
                     loop {
-                        print_stock_data(Arc::clone(&ctx1)).await.expect("Error printing stock data");
-                        println!("Sent stock data");
-                        tokio::time::sleep(Duration::from_secs(120)).await;
+                        let data_read = ctx.data.read().await;
+                        if data_read.get::<BotCtl>().expect("Expected bot toggle").load(Ordering::Relaxed) {
+                            print_stock_data(Arc::clone(&ctx1))
+                                .await
+                                .expect("Error printing stock data");
+                            println!("Sent stock data");
+                            tokio::time::sleep(Duration::from_secs(120)).await;
+                        }
                     }
                 });
-            }
 
+            // TODO: SET STATUS HERE
             // let ctx2 = Arc::clone(&ctx);
             // tokio::spawn(async move {
             //     loop {
@@ -112,7 +107,6 @@ impl EventHandler for Handler {
     async fn ready(&self, _: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
     }
-
 }
 
 #[group]
@@ -123,7 +117,7 @@ struct General;
 #[owners_only]
 #[only_in(guilds)]
 #[summary = "Commands for server owners"]
-#[commands(ping)]
+#[commands(toggle_bot)]
 struct Owner;
 
 #[help]
@@ -152,13 +146,14 @@ async fn my_help(
 
 #[hook]
 async fn before(ctx: &Context, msg: &Message, command_name: &str) -> bool {
-    println!("Got command '{}' by user '{}'", command_name, msg.author.name);
-
-    // Increment the number of times this command has been run once. If
-    // the command's name does not exist in the counter, add a default
-    // value of 0.
+    println!(
+        "Got command '{}' by user '{}'",
+        command_name, msg.author.name
+    );
     let mut data = ctx.data.write().await;
-    let counter = data.get_mut::<CommandCounter>().expect("Expected CommandCounter in TypeMap.");
+    let counter = data
+        .get_mut::<CommandCounter>()
+        .expect("Expected CommandCounter in TypeMap.");
     let entry = counter.entry(command_name.to_string()).or_insert(0);
     *entry += 1;
 
@@ -175,14 +170,15 @@ async fn after(_ctx: &Context, _msg: &Message, command_name: &str, command_resul
 
 #[hook]
 async fn unknown_command(_ctx: &Context, _msg: &Message, unknown_command_name: &str) {
-    let unknown = format!("Could not find command named '{}'" , unknown_command_name);
-    println!("{}" , unknown);
-    _msg.reply(&_ctx.http , unknown).await.expect("Error replying to message");
-
+    let unknown = format!("Could not find command named '{}'", unknown_command_name);
+    println!("{}", unknown);
+    _msg.reply(&_ctx.http, unknown)
+        .await
+        .expect("Error replying to message");
 }
 
 #[hook]
-async fn normal_message(_ctx: &Context, _msg: &Message)  {
+async fn normal_message(_ctx: &Context, _msg: &Message) {
     // println!("Message is not a command '{}'", msg.content);
 }
 
@@ -198,7 +194,10 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
         if info.is_first_try {
             let _ = msg
                 .channel_id
-                .say(&ctx.http, &format!("Try this again in {} seconds.", info.as_secs()))
+                .say(
+                    &ctx.http,
+                    &format!("Try this again in {} seconds.", info.as_secs()),
+                )
                 .await;
         }
     }
@@ -207,15 +206,15 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
 async fn get_jlc_stock(lcsc: &str) -> Result<i64, reqwest::Error> {
     let echo_json: serde_json::Value = reqwest::Client::new()
         .post("https://jlcpcb.com/shoppingCart/smtGood/selectSmtComponentList")
-        .json(&serde_json::json!({
-            "keyword": lcsc
-        }))
+        .json(&serde_json::json!({ "keyword": lcsc }))
         .send()
         .await?
         .json()
         .await?;
 
-    let stock = echo_json["data"]["componentPageInfo"]["list"][0]["stockCount"].as_i64().unwrap();
+    let stock = echo_json["data"]["componentPageInfo"]["list"][0]["stockCount"]
+        .as_i64()
+        .unwrap();
     Ok(stock)
 }
 
@@ -225,14 +224,7 @@ async fn print_stock_data(ctx: Arc<Context>) -> CommandResult {
         .send_message(&ctx, |m| {
             m.embed(|e| {
                 e.title("Atmega32u4-MU");
-                e.field(
-                    "Stock",
-                    format!(
-                        "{}",
-                        stock
-                    ),
-                    false,
-                );
+                e.field("Stock", format!("{}", stock), false);
                 e
             })
         })
@@ -261,18 +253,18 @@ async fn main() {
                 Ok(bot_id) => (owners, bot_id.id),
                 Err(why) => panic!("Could not access the bot id: {:?}", why),
             }
-        },
+        }
         Err(why) => panic!("Could not access application info: {:?}", why),
     };
 
     let framework = StandardFramework::new()
-        .configure(|c| c
-            .with_whitespace(true)
-            .on_mention(Some(bot_id))
-            .prefix("!")
-            .delimiters(vec![", ", ","])
-            .owners(owners)
-        )
+        .configure(|c| {
+            c.with_whitespace(true)
+                .on_mention(Some(bot_id))
+                .prefix("!")
+                .delimiters(vec![", ", ","])
+                .owners(owners)
+        })
         .before(before)
         .after(after)
         .unrecognised_command(unknown_command)
@@ -292,6 +284,7 @@ async fn main() {
 
     {
         let mut data = client.data.write().await;
+        data.insert::<BotCtl>(AtomicBool::new(false));
         data.insert::<CommandCounter>(HashMap::default());
         data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager));
     }
@@ -307,7 +300,9 @@ async fn commands(ctx: &Context, msg: &Message) -> CommandResult {
     let mut contents = "Commands used:\n".to_string();
 
     let data = ctx.data.read().await;
-    let counter = data.get::<CommandCounter>().expect("Expected CommandCounter in TypeMap.");
+    let counter = data
+        .get::<CommandCounter>()
+        .expect("Expected CommandCounter in TypeMap.");
 
     for (k, v) in counter {
         writeln!(contents, "- {name}: {amount}", name = k, amount = v)?;
@@ -325,7 +320,9 @@ async fn echo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             .clean_channel(false)
             .display_as_member_from(guild_id)
     } else {
-        ContentSafeOptions::default().clean_channel(false).clean_role(false)
+        ContentSafeOptions::default()
+            .clean_channel(false)
+            .clean_role(false)
     };
 
     let content = content_safe(&ctx.cache, &args.rest(), &settings).await;
@@ -335,7 +332,6 @@ async fn echo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     Ok(())
 }
 
-
 #[check]
 #[name = "Owner"]
 async fn owner_check(
@@ -344,7 +340,6 @@ async fn owner_check(
     _: &mut Args,
     _: &CommandOptions,
 ) -> Result<(), Reason> {
-
     if msg.author.id != 236222353405640704 {
         return Err(Reason::User("Lacked owner permission".to_string()));
     }
@@ -352,19 +347,17 @@ async fn owner_check(
     Ok(())
 }
 
+
 #[command]
 #[only_in(guilds)]
 #[checks(Owner)]
-async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
-    msg.channel_id.say(&ctx.http, "Pong! : )").await?;
-
-    Ok(())
-}
-
-#[command]
 async fn toggle_bot(ctx: &Context, msg: &Message) -> CommandResult {
-    let data = ctx.data.read().await;
-    msg.channel_id.say(&ctx.http, "Pong! : )").await?;
-
+    let data_read = ctx.data.read().await;
+    let value = data_read
+        .get::<BotCtl>()
+        .expect("Expected MessageCount in TypeMap.")
+        .clone();
+    value.store(!value.load(Ordering::Relaxed), Ordering::Relaxed);
+    msg.channel_id.say(&ctx.http , "Bot toggled").await?;
     Ok(())
 }
