@@ -1,17 +1,19 @@
 // TODO: Basic functionality
 //  - Read stock data from JLC site - COMPLETE
-//  - Iterate over all needed components
-//  - Send this data to component's channels
+//  - Iterate over all needed components - COMPLETE
+//  - Send this data to component's channels - COMPLETE
 //  - Ping roles if components is back in stock
 //  - Set status to time until next update
 //
 // TODO: Command utilities
-//  - Add command to toggle specific components/everything
+//  - Add command to toggle everything - COMPLETE
+//  - Add command to toggle specific components
 //  - Add removal/addition of components with commands
 //
 // TODO: Implement JSON
-//  - Use JSON or other file format to contain components/channels/roles/previous stock
+//  - Use JSON or other file format to contain components/channels/roles/previous stock - COMPLETE
 //  - If previous component stock was 0, ping role with message
+//  - If previous component stock has not changed, do not send a message
 //
 // TODO: Logs (Future)
 //  - Log lifetime usages?
@@ -20,12 +22,16 @@ use std::{
     collections::{HashMap, HashSet},
     env,
     fmt::Write,
+    fs,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
     time::Duration,
 };
+
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use serenity::{
     async_trait,
@@ -39,14 +45,14 @@ use serenity::{
     http::Http,
     model::{
         channel::Message,
-        gateway::{Ready},
+        gateway::Ready,
         id::{ChannelId, GuildId, UserId},
     },
     prelude::*,
     utils::{content_safe, ContentSafeOptions},
 };
-use tokio::sync::{Mutex};
-
+use std::fs::File;
+use tokio::sync::Mutex;
 
 struct ShardManagerContainer;
 
@@ -70,6 +76,20 @@ impl TypeMapKey for BotCtl {
     type Value = AtomicBool;
 }
 
+#[derive(Serialize, Deserialize)]
+struct Component {
+    name: String,
+    lcsc: String,
+    enabled: bool,
+    channel_id: u64,
+    prev_stock: u64,
+    role_id: u64
+}
+#[derive(Serialize, Deserialize)]
+struct Components {
+    components: Vec<Component>,
+}
+
 #[async_trait]
 impl EventHandler for Handler {
     async fn cache_ready(&self, ctx: Context, _guilds: Vec<GuildId>) {
@@ -77,18 +97,31 @@ impl EventHandler for Handler {
         let ctx = Arc::new(ctx);
         if !self.is_loop_running.load(Ordering::Relaxed) {
             let ctx1 = Arc::clone(&ctx);
-                tokio::spawn(async move {
-                    loop {
-                        let data_read = ctx.data.read().await;
-                        if data_read.get::<BotCtl>().expect("Expected bot toggle").load(Ordering::Relaxed) {
-                            print_stock_data(Arc::clone(&ctx1))
-                                .await
-                                .expect("Error printing stock data");
-                            println!("Sent stock data");
-                            tokio::time::sleep(Duration::from_secs(120)).await;
+            tokio::spawn(async move {
+                loop {
+                    let data_read = ctx.data.read().await;
+                    if data_read
+                        .get::<BotCtl>()
+                        .expect("Expected bot toggle")
+                        .load(Ordering::Relaxed)
+                    {
+                        let mut component_list = read_json("src/components.json");
+                        for component in &mut component_list.components {
+                            if component.enabled {
+                                let data = print_stock_data(Arc::clone(&ctx1), component).await;
+                                println!("Sent stock for {}", component.name);
+                                component.prev_stock = data;
+                            }
                         }
+                        serde_json::to_writer_pretty(
+                            &File::create("src/components.json").expect("File creation error"),
+                            &component_list,
+                        )
+                        .expect("Error writing file");
+                        tokio::time::sleep(Duration::from_secs(120)).await;
                     }
-                });
+                }
+            });
 
             // TODO: SET STATUS HERE
             // let ctx2 = Arc::clone(&ctx);
@@ -203,8 +236,13 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
     }
 }
 
+fn read_json(path: &str) -> Components {
+    let file = fs::File::open(path).expect("file should open read only");
+    serde_json::from_reader(file).expect("file should be proper JSON")
+}
+
 async fn get_jlc_stock(lcsc: &str) -> Result<i64, reqwest::Error> {
-    let echo_json: serde_json::Value = reqwest::Client::new()
+    let echo_json: Value = reqwest::Client::new()
         .post("https://jlcpcb.com/shoppingCart/smtGood/selectSmtComponentList")
         .json(&serde_json::json!({ "keyword": lcsc }))
         .send()
@@ -218,13 +256,16 @@ async fn get_jlc_stock(lcsc: &str) -> Result<i64, reqwest::Error> {
     Ok(stock)
 }
 
-async fn print_stock_data(ctx: Arc<Context>) -> CommandResult {
-    let stock = get_jlc_stock("C112161").await.expect("Error");
-    if let Err(why) = ChannelId(877779984448638976)
+async fn print_stock_data(ctx: Arc<Context>, component: &Component) -> u64 {
+    let stock = get_jlc_stock(&component.lcsc)
+        .await
+        .expect("Error getting stock data");
+    if let Err(why) = ChannelId(component.channel_id)
         .send_message(&ctx, |m| {
             m.embed(|e| {
-                e.title("Atmega32u4-MU");
+                e.title(&component.name);
                 e.field("Stock", format!("{}", stock), false);
+                e.field("Previous Stock", component.prev_stock, false);
                 e
             })
         })
@@ -232,13 +273,16 @@ async fn print_stock_data(ctx: Arc<Context>) -> CommandResult {
     {
         eprintln!("Error sending message: {:?}", why);
     };
-    Ok(())
+    if component.prev_stock == 0 {
+        // TODO: Ping Role
+    }
+    stock.unsigned_abs()
 }
 
 #[tokio::main]
 async fn main() {
-    let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
 
+    let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
     let http = Http::new_with_token(&token);
 
     let (owners, bot_id) = match http.get_current_application_info().await {
@@ -341,12 +385,12 @@ async fn owner_check(
     _: &CommandOptions,
 ) -> Result<(), Reason> {
     if msg.author.id != 236222353405640704 {
-        return Err(Reason::User("Lacked owner permission".to_string()));
+        let result = Err(Reason::User("Lacked owner permission".to_string()));
+        return result;
     }
 
     Ok(())
 }
-
 
 #[command]
 #[only_in(guilds)]
@@ -358,6 +402,6 @@ async fn toggle_bot(ctx: &Context, msg: &Message) -> CommandResult {
         .expect("Expected MessageCount in TypeMap.")
         .clone();
     value.store(!value.load(Ordering::Relaxed), Ordering::Relaxed);
-    msg.channel_id.say(&ctx.http , "Bot toggled").await?;
+    msg.channel_id.say(&ctx.http, "Bot toggled").await?;
     Ok(())
 }
