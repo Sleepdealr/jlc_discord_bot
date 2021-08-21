@@ -20,26 +20,25 @@
 
 use std::{
     collections::{HashMap, HashSet},
-    env,
-    fmt::Write,
-    fs,
+    env, fs,
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc,
+        atomic::{AtomicBool, Ordering},
     },
     time::Duration,
 };
+use std::fs::File;
 
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-
 use serenity::{
     async_trait,
     client::bridge::gateway::ShardManager,
     framework::standard::{
-        help_commands,
-        macros::{check, command, group, help, hook},
-        Args, CommandGroup, CommandOptions, CommandResult, DispatchError, HelpOptions, Reason,
+        Args,
+        CommandGroup,
+        CommandOptions, CommandResult, DispatchError, help_commands, HelpOptions, macros::{check, command, group, help, hook}, Reason,
         StandardFramework,
     },
     http::Http,
@@ -51,7 +50,6 @@ use serenity::{
     prelude::*,
     utils::{content_safe, ContentSafeOptions},
 };
-use std::fs::File;
 use tokio::sync::Mutex;
 
 struct ShardManagerContainer;
