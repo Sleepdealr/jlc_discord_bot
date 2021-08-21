@@ -2,18 +2,21 @@
 //  - Read stock data from JLC site - COMPLETE
 //  - Iterate over all needed components - COMPLETE
 //  - Send this data to component's channels - COMPLETE
-//  - Ping roles if components is back in stock
+//  - Ping roles if components is back in stock - COMPLETE
 //  - Set status to time until next update
+//  - Add more info to embed - COMPLETE
+//      - Link to product page - COMPLETE
+//      - Image in Embed - COMPLETE
 //
 // TODO: Command utilities
 //  - Add command to toggle everything - COMPLETE
 //  - Add command to toggle specific components
 //  - Add removal/addition of components with commands
 //
-// TODO: Implement JSON
+// TODO: Implement JSON - COMPLETE
 //  - Use JSON or other file format to contain components/channels/roles/previous stock - COMPLETE
-//  - If previous component stock was 0, ping role with message
-//  - If previous component stock has not changed, do not send a message
+//  - If previous component stock was 0, ping role with message - COMPLETE
+//  - If previous component stock has not changed, do not send a message - COMPLETE
 //
 // TODO: Logs (Future)
 //  - Log lifetime usages?
@@ -58,12 +61,6 @@ impl TypeMapKey for ShardManagerContainer {
     type Value = Arc<Mutex<ShardManager>>;
 }
 
-struct CommandCounter;
-
-impl TypeMapKey for CommandCounter {
-    type Value = HashMap<String, u64>;
-}
-
 struct Handler {
     is_loop_running: AtomicBool,
 }
@@ -74,6 +71,11 @@ impl TypeMapKey for BotCtl {
     type Value = AtomicBool;
 }
 
+struct Data {
+    stock: u64,
+    image_url: String,
+}
+
 #[derive(Serialize, Deserialize)]
 struct Component {
     name: String,
@@ -81,8 +83,9 @@ struct Component {
     enabled: bool,
     channel_id: u64,
     prev_stock: u64,
-    role_id: u64
+    role_id: u64,
 }
+
 #[derive(Serialize, Deserialize)]
 struct Components {
     components: Vec<Component>,
@@ -116,7 +119,7 @@ impl EventHandler for Handler {
                             &component_list,
                         )
                         .expect("Error writing file");
-                        tokio::time::sleep(Duration::from_secs(120)).await;
+                        tokio::time::sleep(Duration::from_secs(86400)).await;
                     }
                 }
             });
@@ -141,7 +144,7 @@ impl EventHandler for Handler {
 }
 
 #[group]
-#[commands(echo, commands)]
+#[commands(echo, list_components)]
 struct General;
 
 #[group]
@@ -162,7 +165,6 @@ If you want more information about a specific command, just pass the command as 
 // Serenity will automatically analyse and generate a hint/tip explaining the possible
 // cases of ~~strikethrough-commands~~, but only if
 // `strikethrough_commands_tip_in_{dm, guild}` aren't specified.
-
 async fn my_help(
     context: &Context,
     msg: &Message,
@@ -176,19 +178,13 @@ async fn my_help(
 }
 
 #[hook]
-async fn before(ctx: &Context, msg: &Message, command_name: &str) -> bool {
+async fn before(_ctx: &Context, msg: &Message, command_name: &str) -> bool {
     println!(
         "Got command '{}' by user '{}'",
         command_name, msg.author.name
     );
-    let mut data = ctx.data.write().await;
-    let counter = data
-        .get_mut::<CommandCounter>()
-        .expect("Expected CommandCounter in TypeMap.");
-    let entry = counter.entry(command_name.to_string()).or_insert(0);
-    *entry += 1;
 
-    true // if `before` returns false, command processing doesn't happen.
+    true
 }
 
 #[hook]
@@ -221,7 +217,6 @@ async fn delay_action(ctx: &Context, msg: &Message) {
 #[hook]
 async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
     if let DispatchError::Ratelimited(info) = error {
-        // We notify them only once.
         if info.is_first_try {
             let _ = msg
                 .channel_id
@@ -239,7 +234,7 @@ fn read_json(path: &str) -> Components {
     serde_json::from_reader(file).expect("file should be proper JSON")
 }
 
-async fn get_jlc_stock(lcsc: &str) -> Result<i64, reqwest::Error> {
+async fn get_jlc_stock(lcsc: &str) -> Result<Data, reqwest::Error> {
     let echo_json: Value = reqwest::Client::new()
         .post("https://jlcpcb.com/shoppingCart/smtGood/selectSmtComponentList")
         .json(&serde_json::json!({ "keyword": lcsc }))
@@ -248,38 +243,58 @@ async fn get_jlc_stock(lcsc: &str) -> Result<i64, reqwest::Error> {
         .json()
         .await?;
 
-    let stock = echo_json["data"]["componentPageInfo"]["list"][0]["stockCount"]
-        .as_i64()
+    let jlc_stock = echo_json["data"]["componentPageInfo"]["list"][0]["stockCount"]
+        .as_u64()
         .unwrap();
-    Ok(stock)
+
+    let image_url = echo_json["data"]["componentPageInfo"]["list"][0]["componentImageUrl"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let data = Data {
+        stock: jlc_stock,
+        image_url,
+    };
+    Ok(data)
 }
 
 async fn print_stock_data(ctx: Arc<Context>, component: &Component) -> u64 {
-    let stock = get_jlc_stock(&component.lcsc)
+    let data = get_jlc_stock(&component.lcsc)
         .await
         .expect("Error getting stock data");
-    if let Err(why) = ChannelId(component.channel_id)
-        .send_message(&ctx, |m| {
-            m.embed(|e| {
-                e.title(&component.name);
-                e.field("Stock", format!("{}", stock), false);
-                e.field("Previous Stock", component.prev_stock, false);
-                e
+    if data.stock != component.prev_stock {
+        if let Err(why) = ChannelId(component.channel_id)
+            .send_message(&ctx, |m| {
+                m.embed(|e| {
+                    e.title(&component.name).url(format!(
+                        "https://jlcpcb.com/parts/componentSearch?isSearch=true&searchTxt={}",
+                        component.lcsc
+                    ));
+                    e.image(&data.image_url);
+                    e.timestamp(&Utc::now());
+                    e.field("Stock", format!("{}", data.stock), false);
+                    e.field("Previous Stock", component.prev_stock, false);
+                    e.field("LCSC Number", component.lcsc.as_str(), false);
+                    e
+                })
             })
-        })
-        .await
-    {
-        eprintln!("Error sending message: {:?}", why);
-    };
-    if component.prev_stock == 0 {
-        // TODO: Ping Role
+            .await
+        {
+            eprintln!("Error sending message: {:?}", why);
+        };
     }
-    stock.unsigned_abs()
+    if component.prev_stock == 0 && data.stock > 0 {
+        ChannelId(component.channel_id)
+            .say(&ctx.http, format!("<@&{}>", component.role_id))
+            .await
+            .expect("Error");
+        println!("Pinged role for {}", component.name);
+    }
+    data.stock
 }
 
 #[tokio::main]
 async fn main() {
-
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
     let http = Http::new_with_token(&token);
 
@@ -326,33 +341,13 @@ async fn main() {
 
     {
         let mut data = client.data.write().await;
-        data.insert::<BotCtl>(AtomicBool::new(false));
-        data.insert::<CommandCounter>(HashMap::default());
+        data.insert::<BotCtl>(AtomicBool::new(true));
         data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager));
     }
 
     if let Err(why) = client.start().await {
         println!("Client error: {:?}", why);
     }
-}
-
-#[command]
-#[bucket = "complicated"]
-async fn commands(ctx: &Context, msg: &Message) -> CommandResult {
-    let mut contents = "Commands used:\n".to_string();
-
-    let data = ctx.data.read().await;
-    let counter = data
-        .get::<CommandCounter>()
-        .expect("Expected CommandCounter in TypeMap.");
-
-    for (k, v) in counter {
-        writeln!(contents, "- {name}: {amount}", name = k, amount = v)?;
-    }
-
-    msg.channel_id.say(&ctx.http, &contents).await?;
-
-    Ok(())
 }
 
 #[command]
@@ -401,5 +396,30 @@ async fn toggle_bot(ctx: &Context, msg: &Message) -> CommandResult {
         .clone();
     value.store(!value.load(Ordering::Relaxed), Ordering::Relaxed);
     msg.channel_id.say(&ctx.http, "Bot toggled").await?;
+    Ok(())
+}
+
+#[command]
+async fn list_components(ctx: &Context, msg: &Message) -> CommandResult {
+    let component_list = read_json("src/components.json");
+    let mut name_list: String = "".to_string();
+    for component in component_list.components {
+        name_list.push_str(component.name.as_str());
+        name_list.push_str("\n");
+    }
+    if let Err(why) = msg
+        .channel_id
+        .send_message(&ctx, |m| {
+            m.embed(|e| {
+                e.title("All current components");
+                e.timestamp(&Utc::now());
+                e.field("Components", name_list, false);
+                e
+            })
+        })
+        .await
+    {
+        eprintln!("Error sending message: {:?}", why);
+    };
     Ok(())
 }

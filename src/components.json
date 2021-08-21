@@ -1,14 +1,20 @@
 {
-  "components" : [
+  "components": [
     {
       "name": "Atmega32u4-MU",
       "lcsc": "C112161",
-      "channel" : "877779984448638976"
+      "enabled": true,
+      "channel_id": 877779984448638976,
+      "prev_stock": 319,
+      "role_id": 878011956475359273
     },
     {
       "name": "Atmega32u4-AU",
       "lcsc": "C44854",
-      "channel" : "877779984448638976"
+      "enabled": true,
+      "channel_id": 877779984448638976,
+      "prev_stock": 0,
+      "role_id": 878011956475359273
     }
   ]
 }
