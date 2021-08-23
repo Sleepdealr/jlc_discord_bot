@@ -5,7 +5,7 @@
       "lcsc": "C112161",
       "enabled": true,
       "channel_id": 877779984448638976,
-      "prev_stock": 319,
+      "prev_stock": 300,
       "role_id": 878011956475359273
     },
     {
@@ -15,6 +15,22 @@
       "channel_id": 877779984448638976,
       "prev_stock": 0,
       "role_id": 878011956475359273
+    },
+    {
+      "name": "SM04B-SRSS-TB(LF)(SN)",
+      "lcsc": "C160404",
+      "enabled": true,
+      "channel_id": 877780102065315870,
+      "prev_stock": 0,
+      "role_id": 0
+    },
+    {
+      "name": "STM32F042G6U6",
+      "lcsc": "C961597",
+      "enabled": true,
+      "channel_id": 879442473431232532,
+      "prev_stock": 0,
+      "role_id": 0
     }
   ]
 }

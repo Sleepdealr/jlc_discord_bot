@@ -1,12 +1,15 @@
-// TODO: Basic functionality
+// TODO: Basic functionality - COMPLETE
 //  - Read stock data from JLC site - COMPLETE
 //  - Iterate over all needed components - COMPLETE
 //  - Send this data to component's channels - COMPLETE
 //  - Ping roles if components is back in stock - COMPLETE
-//  - Set status to time until next update
 //  - Add more info to embed - COMPLETE
 //      - Link to product page - COMPLETE
 //      - Image in Embed - COMPLETE
+//
+// TODO - Time utilities
+//  - Set bot to execute at a specific time
+//  - Set status to time until next update
 //
 // TODO: Command utilities
 //  - Add command to toggle everything - COMPLETE
@@ -17,12 +20,9 @@
 //  - Use JSON or other file format to contain components/channels/roles/previous stock - COMPLETE
 //  - If previous component stock was 0, ping role with message - COMPLETE
 //  - If previous component stock has not changed, do not send a message - COMPLETE
-//
-// TODO: Logs (Future)
-//  - Log lifetime usages?
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     env, fs,
     sync::{
         Arc,
@@ -124,7 +124,7 @@ impl EventHandler for Handler {
                 }
             });
 
-            // TODO: SET STATUS HERE
+            // FIXME: SET STATUS HERE
             // let ctx2 = Arc::clone(&ctx);
             // tokio::spawn(async move {
             //     loop {
@@ -144,7 +144,7 @@ impl EventHandler for Handler {
 }
 
 #[group]
-#[commands(echo, list_components)]
+#[commands(echo, list)]
 struct General;
 
 #[group]
@@ -159,12 +159,9 @@ struct Owner;
 If you want more information about a specific command, just pass the command as argument."]
 #[command_not_found_text = "Could not find command: `{}`."]
 #[lacking_permissions = "Hide"]
-// If the user is nothing but lacking a certain role, we just display it hence our variant is `Nothing`.
 #[lacking_role = "Nothing"]
 #[wrong_channel = "Strike"]
-// Serenity will automatically analyse and generate a hint/tip explaining the possible
-// cases of ~~strikethrough-commands~~, but only if
-// `strikethrough_commands_tip_in_{dm, guild}` aren't specified.
+
 async fn my_help(
     context: &Context,
     msg: &Message,
@@ -270,7 +267,7 @@ async fn print_stock_data(ctx: Arc<Context>, component: &Component) -> u64 {
                         "https://jlcpcb.com/parts/componentSearch?isSearch=true&searchTxt={}",
                         component.lcsc
                     ));
-                    e.image(&data.image_url);
+                    e.thumbnail(&data.image_url);
                     e.timestamp(&Utc::now());
                     e.field("Stock", format!("{}", data.stock), false);
                     e.field("Previous Stock", component.prev_stock, false);
@@ -283,7 +280,7 @@ async fn print_stock_data(ctx: Arc<Context>, component: &Component) -> u64 {
             eprintln!("Error sending message: {:?}", why);
         };
     }
-    if component.prev_stock == 0 && data.stock > 0 {
+    if component.prev_stock == 0 && data.stock > 0 && component.role_id != 0 {
         ChannelId(component.channel_id)
             .say(&ctx.http, format!("<@&{}>", component.role_id))
             .await
@@ -400,7 +397,7 @@ async fn toggle_bot(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
-async fn list_components(ctx: &Context, msg: &Message) -> CommandResult {
+async fn list(ctx: &Context, msg: &Message) -> CommandResult {
     let component_list = read_json("src/components.json");
     let mut name_list: String = "".to_string();
     for component in component_list.components {
