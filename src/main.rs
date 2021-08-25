@@ -292,6 +292,7 @@ async fn print_stock_data(ctx: Arc<Context>, component: &Component) -> u64 {
 
 #[tokio::main]
 async fn main() {
+    dotenv::dotenv().expect("Failed to load .env file");
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
     let http = Http::new_with_token(&token);
 
