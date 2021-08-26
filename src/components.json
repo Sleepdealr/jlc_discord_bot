@@ -5,7 +5,7 @@
       "lcsc": "C112161",
       "enabled": true,
       "channel_id": 877779984448638976,
-      "prev_stock": 283,
+      "prev_stock": 233,
       "role_id": 878011956475359273
     },
     {
@@ -29,6 +29,14 @@
       "lcsc": "C961597",
       "enabled": true,
       "channel_id": 879442473431232532,
+      "prev_stock": 0,
+      "role_id": 0
+    },
+    {
+      "name": "IS31FL3737",
+      "lcsc": "C2678568",
+      "enabled": true,
+      "channel_id": 880253293664829482,
       "prev_stock": 0,
       "role_id": 0
     }

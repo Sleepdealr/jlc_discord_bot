@@ -1,0 +1,12 @@
+[Unit]
+Description=JLC Discord bot
+After=network.target
+
+[Service]
+Type=simple
+User=[username]
+WorkingDirectory=[Directory]
+ExecStart=[Directory]/start.sh
+
+[Install]
+WantedBy=multi-user.target
