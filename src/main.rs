@@ -106,7 +106,7 @@ impl EventHandler for Handler {
                         .expect("Expected bot toggle")
                         .load(Ordering::Relaxed)
                     {
-                        let mut component_list = read_json("src/components.json");
+                        let mut component_list:Components = read_json("config/components.json");
                         for component in &mut component_list.components {
                             if component.enabled {
                                 let data = print_stock_data(Arc::clone(&ctx1), component).await;
@@ -115,7 +115,7 @@ impl EventHandler for Handler {
                             }
                         }
                         serde_json::to_writer_pretty(
-                            &File::create("src/components.json").expect("File creation error"),
+                            &File::create("../config/components.json").expect("File creation error"),
                             &component_list,
                         )
                         .expect("Error writing file");
@@ -399,7 +399,7 @@ async fn toggle_bot(ctx: &Context, msg: &Message) -> CommandResult {
 
 #[command]
 async fn list(ctx: &Context, msg: &Message) -> CommandResult {
-    let component_list = read_json("src/components.json");
+    let component_list = read_json("config/components.json");
     let mut name_list: String = "".to_string();
     for component in component_list.components {
         name_list.push_str(component.name.as_str());
@@ -419,5 +419,11 @@ async fn list(ctx: &Context, msg: &Message) -> CommandResult {
     {
         eprintln!("Error sending message: {:?}", why);
     };
+    Ok(())
+}
+
+#[command]
+async fn iam(ctx: &Context, msg: &Message) -> CommandResult {
+    let json = read_json("config/roles.json");
     Ok(())
 }
