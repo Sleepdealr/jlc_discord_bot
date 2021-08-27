@@ -9,15 +9,16 @@ edition = "2018"
 sys-info = "0.9.0"
 chrono = "0.4.19"
 reqwest = { version = "0.11", features = ["json"] }
-serde_json = "*"
-serde = "*"
-dotenv = "*"
-heim = {features = ["memory", "process"] }
-timeago = "*"
-pretty_env_logger = "*"
+serde_json = "1.0.66"
+serde = "1.0.129"
+dotenv = "0.15.0"
+heim = {git = "https://github.com/heim-rs/heim" , features = ["memory", "process"] }
+timeago = "0.3.0"
+pretty_env_logger = "0.4.0"
 log = "0.4.8"
 futures = "0.3.5"
 regex = "1.3.9"
+memchr = '2.3.*'
 
 [dependencies.serenity]
 version = "0.10.9"
