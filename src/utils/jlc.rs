@@ -1,3 +1,4 @@
+use std::fs;
 use std::sync::Arc;
 
 use chrono::Utc;
@@ -5,7 +6,12 @@ use serde_json::Value;
 use serenity::model::id::ChannelId;
 use serenity::prelude::*;
 
-use crate::{Component, Data};
+use crate::keys::{Component, Components, Data};
+
+pub fn read_components_json(path: &str) -> Components {
+    let file = fs::File::open(path).expect("file should open read only");
+    serde_json::from_reader(file).expect("file should be proper JSON")
+}
 
 pub async fn get_jlc_stock(lcsc: &str) -> Result<Data, reqwest::Error> {
     let echo_json: Value = reqwest::Client::new()

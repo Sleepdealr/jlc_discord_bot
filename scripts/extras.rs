@@ -98,3 +98,130 @@ async fn set_status_to_current_time(ctx: Arc<Context>) {
 
     ctx.set_activity(Activity::playing(&formatted_time)).await;
 }
+
+
+#[command]
+#[description("Bot stats")]
+async fn stats(ctx: &Context, msg: &Message) -> CommandResult {
+
+    let bot_version = env!("CARGO_PKG_VERSION");
+
+    let memory = memory::memory().await.unwrap();
+    // get current process
+    let process = process::current().await.unwrap();
+    // get current ram
+    let thismem = process.memory().await.unwrap();
+    let fullmem = memory.total();
+    // get current cpu
+    let cpu_1 = process.cpu_usage().await.unwrap();
+
+    time::sleep(time::Duration::from_millis(100)).await;
+
+    let cpu_2 = process.cpu_usage().await.unwrap();
+
+    let git_stdout;
+    git_stdout = Command::new("sh")
+        .arg("-c")
+        .arg("git log -1 | grep ^commit | awk '{print $2}'")
+        .output()
+        .await.unwrap();
+
+    let mut git_commit: String = "".to_string();
+
+    if std::str::from_utf8(&git_stdout.stdout).unwrap() != "" {
+        git_commit.push('#');
+        git_commit.push_str(std::str::from_utf8(&git_stdout.stdout).unwrap());
+    } else {
+        git_commit.push_str("prod")
+    }
+    git_commit.truncate(7);
+
+
+    let (name, discriminator) = match ctx.http.get_current_application_info().await {
+        Ok(info) => (info.owner.name, info.owner.discriminator),
+        Err(why) => panic!("Could not access application info: {:?}", why),
+    };
+
+    let owner_tag = name.to_string() + "#" + &discriminator.to_string();
+
+    let guilds_count = &ctx.cache.guilds().await.len();
+    let channels_count = &ctx.cache.guild_channel_count().await;
+    let users_count = ctx.cache.user_count().await;
+    let users_count_unknown = ctx.cache.unknown_members().await as usize;
+
+    let uptime = {
+        let data = ctx.data.read().await;
+        match data.get::<Uptime>() {
+            Some(time) => {
+                if let Some(boot_time) = time.get("boot") {
+                    let now = Utc::now();
+                    let mut f = timeago::Formatter::new();
+                    f.num_items(4);
+                    f.ago("");
+
+                    f.convert_chrono(boot_time.to_owned(), now)
+                } else {
+                    "Uptime not available".to_owned()
+                }
+            }
+            None => "Uptime not available.".to_owned(),
+        }
+    };
+
+    let mut f = timeago::Formatter::new();
+    f.num_items(4);
+    f.ago("");
+
+    let shard_plural = if ctx.cache.shard_count().await > 1 { "s" } else { "" };
+    let avatar = ctx.cache.current_user().await.avatar_url().unwrap_or("https://cdn.discordapp.com/embed/avatars/0.png".to_string());
+    let shards = ctx.cache.shard_count().await;
+
+    let _ = msg
+        .channel_id
+        .send_message(&ctx.http, |m| {
+            m.embed(|e| {
+                e.color(0x3498db)
+                    .title(&format!("maki v{} {}", bot_version, git_commit,))
+                    .url("https://maki.iscute.dev")
+                    .thumbnail(&format!("{}", avatar))
+                    .field("Author", &owner_tag, false)
+                    .field("Guilds", &guilds_count.to_string(), true)
+                    .field("Channels", &channels_count.to_string(), true)
+                    .field(
+                        "Users",
+                        &format!(
+                            "`{} Total`\n`{} Cached`",
+                            &users_count + &users_count_unknown,
+                            users_count
+                        ),
+                        true,
+                    )
+                    .field(
+                        "Memory",
+                        format!(
+                            "`{} MB used`\n`{} MB virt`\n`{} GB available`",
+                            &thismem.rss().get::<units::information::megabyte>(),
+                            &thismem.vms().get::<units::information::megabyte>(),
+                            &fullmem.get::<units::information::gigabyte>()
+                        ),
+                        true,
+                    )
+                    .field(
+                        "CPU",
+                        format!("`{}%`", (cpu_2 - cpu_1).get::<units::ratio::percent>()),
+                        true,
+                    )
+                    .field(
+                        "Shards",
+                        format!("`{} shard{}` ", shards, shard_plural),
+                        true,
+                    )
+                    .field("Bot Uptime", &uptime, false);
+                e
+            });
+            m
+        })
+        .await;
+
+    Ok(())
+}

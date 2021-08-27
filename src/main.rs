@@ -7,7 +7,7 @@
 //      - Link to product page - COMPLETE
 //      - Image in Embed - COMPLETE
 //
-// TODO - Time utilities
+// TODO - Time utilities - Probably not going to do this since it's so goddamn annoying
 //  - Set bot to execute at a specific time
 //  - Set status to time until next update
 //
@@ -21,17 +21,22 @@
 //  - If previous component stock was 0, ping role with message - COMPLETE
 //  - If previous component stock has not changed, do not send a message - COMPLETE
 
+#[macro_use] extern crate log;
+extern crate pretty_env_logger;
+
 use std::{
     collections::HashSet,
-    env, fs,
+    env,
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
     },
     time::Duration,
 };
+use std::collections::HashMap;
 use std::fs::File;
 
+use chrono::Utc;
 use serenity::{
     async_trait,
     framework::standard::{
@@ -48,13 +53,17 @@ use serenity::{
     },
     prelude::*,
 };
+use serenity::model::event::ResumedEvent;
 
 use commands::general::*;
 use commands::jlc::*;
 use commands::meta::*;
+use commands::moderation::*;
+use commands::roles::*;
 use keys::*;
 
-use crate::utils::jlc::print_stock_data;
+use crate::utils::jlc::{print_stock_data, read_components_json};
+
 
 #[macro_use]
 mod utils;
@@ -81,7 +90,7 @@ impl EventHandler for Handler {
                         .expect("Expected bot toggle")
                         .load(Ordering::Relaxed)
                     {
-                        let mut component_list: Components = read_json("config/components.json");
+                        let mut component_list: Components = read_components_json("config/components.json");
                         for component in &mut component_list.components {
                             if component.enabled {
                                 let data = print_stock_data(Arc::clone(&ctx1), component).await;
@@ -113,13 +122,34 @@ impl EventHandler for Handler {
             self.is_loop_running.swap(true, Ordering::Relaxed);
         }
     }
-    async fn ready(&self, _: Context, ready: Ready) {
-        println!("{} is connected!", ready.user.name);
+    async fn ready(&self, ctx: Context, ready: Ready) {
+        if let Some(shard) = ready.shard {
+            info!(
+                "Connected as {} on shard {}/{}",
+                ready.user.name,
+                shard[0] + 1,
+                shard[1]
+            );
+        } else {
+            info!("Connected as {}", ready.user.name);
+        }
+
+        let data = ctx.data.write();
+        match data.await.get_mut::<Uptime>() {
+            Some(uptime) => {
+                uptime.entry(String::from("boot")).or_insert_with(Utc::now);
+            }
+            None => error!("Unable to insert boot time into client data."),
+        };
+    }
+
+    async fn resume(&self, _: Context, _: ResumedEvent) {
+        info!("Resumed");
     }
 }
 
 #[group]
-#[commands(echo, list)]
+#[commands(echo, list , stats, iam)]
 struct General;
 
 #[group]
@@ -128,6 +158,12 @@ struct General;
 #[summary = "Commands for server owners"]
 #[commands(toggle_bot)]
 struct Owner;
+
+#[group]
+#[commands(clear, kick, ban)]
+#[description = "Server management."]
+struct Moderation;
+
 
 #[help]
 #[individual_command_tip = "Hello! This is a JLCPCB component stock checker bot\n\n\
@@ -201,15 +237,13 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
     }
 }
 
-fn read_json(path: &str) -> Components {
-    let file = fs::File::open(path).expect("file should open read only");
-    serde_json::from_reader(file).expect("file should be proper JSON")
-}
+
 
 #[tokio::main]
 async fn main() {
     dotenv::dotenv().expect("Failed to load .env file");
-    let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
+    let token = &env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
+    let prefix = &env::var("PREFIX").expect("Expected a prefix in the environment.");
     let http = Http::new_with_token(&token);
 
     let (owners, bot_id) = match http.get_current_application_info().await {
@@ -232,7 +266,7 @@ async fn main() {
         .configure(|c| {
             c.with_whitespace(true)
                 .on_mention(Some(bot_id))
-                .prefix("!")
+                .prefix(prefix)
                 .delimiters(vec![", ", ","])
                 .owners(owners)
         })
@@ -243,7 +277,8 @@ async fn main() {
         .on_dispatch_error(dispatch_error)
         .help(&MY_HELP)
         .group(&GENERAL_GROUP)
-        .group(&OWNER_GROUP);
+        .group(&OWNER_GROUP)
+        .group(&MODERATION_GROUP);
 
     let mut client = Client::builder(&token)
         .event_handler(Handler {
@@ -257,6 +292,7 @@ async fn main() {
         let mut data = client.data.write().await;
         data.insert::<BotCtl>(AtomicBool::new(true));
         data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager));
+        data.insert::<keys::Uptime>(HashMap::default());
     }
 
     if let Err(why) = client.start().await {

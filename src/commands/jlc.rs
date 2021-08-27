@@ -8,11 +8,11 @@ use serenity::{
     prelude::*,
 };
 
-use crate::read_json;
+use crate::utils::jlc::read_components_json;
 
 #[command]
 async fn list(ctx: &Context, msg: &Message) -> CommandResult {
-    let component_list = read_json("config/components.json");
+    let component_list = read_components_json("config/components.json");
     let mut name_list: String = "".to_string();
     for component in component_list.components {
         name_list.push_str(component.name.as_str());
