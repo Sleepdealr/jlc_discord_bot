@@ -64,7 +64,6 @@ use keys::*;
 
 use crate::utils::jlc::{print_stock_data, read_components_json};
 
-
 #[macro_use]
 mod utils;
 mod commands;
@@ -149,7 +148,7 @@ impl EventHandler for Handler {
 }
 
 #[group]
-#[commands(echo, list , stats, iam)]
+#[commands(echo, list , stats, iam , iamnot)]
 struct General;
 
 #[group]
