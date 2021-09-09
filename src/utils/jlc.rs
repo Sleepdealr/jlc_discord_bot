@@ -14,7 +14,7 @@ pub fn read_components_json(path: &str) -> Components {
 }
 
 pub async fn get_jlc_stock(lcsc: &str) -> Result<Data, reqwest::Error> {
-    let echo_json: Value = reqwest::Client::new()
+    let response: Value = reqwest::Client::new()
         .post("https://jlcpcb.com/shoppingCart/smtGood/selectSmtComponentList")
         .json(&serde_json::json!({ "keyword": lcsc }))
         .send()
@@ -22,11 +22,11 @@ pub async fn get_jlc_stock(lcsc: &str) -> Result<Data, reqwest::Error> {
         .json()
         .await?;
 
-    let jlc_stock = echo_json["data"]["componentPageInfo"]["list"][0]["stockCount"]
+    let jlc_stock = response["data"]["componentPageInfo"]["list"][0]["stockCount"]
         .as_u64()
         .unwrap();
 
-    let image_url = echo_json["data"]["componentPageInfo"]["list"][0]["componentImageUrl"]
+    let image_url = response["data"]["componentPageInfo"]["list"][0]["componentImageUrl"]
         .as_str()
         .unwrap()
         .to_string();

@@ -21,7 +21,8 @@
 //  - If previous component stock was 0, ping role with message - COMPLETE
 //  - If previous component stock has not changed, do not send a message - COMPLETE
 
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 extern crate pretty_env_logger;
 
 use std::{
@@ -42,8 +43,7 @@ use serenity::{
     framework::standard::{
         Args,
         CommandGroup,
-        CommandResult, DispatchError, help_commands, HelpOptions, macros::{group, help, hook},
-        StandardFramework,
+        CommandResult, DispatchError, help_commands, HelpOptions, macros::{group, help, hook}, StandardFramework,
     },
     http::Http,
     model::{
@@ -89,7 +89,8 @@ impl EventHandler for Handler {
                         .expect("Expected bot toggle")
                         .load(Ordering::Relaxed)
                     {
-                        let mut component_list: Components = read_components_json("config/components.json");
+                        let mut component_list: Components =
+                            read_components_json("config/components.json");
                         for component in &mut component_list.components {
                             if component.enabled {
                                 let data = print_stock_data(Arc::clone(&ctx1), component).await;
@@ -101,9 +102,9 @@ impl EventHandler for Handler {
                             &File::create("config/components.json").expect("File creation error"),
                             &component_list,
                         )
-                        .expect("Error writing file");
-                        tokio::time::sleep(Duration::from_secs(86400)).await;
+                            .expect("Error writing file");
                     }
+                    tokio::time::sleep(Duration::from_secs(86400)).await;
                 }
             });
 
@@ -148,7 +149,7 @@ impl EventHandler for Handler {
 }
 
 #[group]
-#[commands(echo, list , stats, iam , iamnot)]
+#[commands(echo, list, stats, iam, iamnot)]
 struct General;
 
 #[group]
@@ -159,16 +160,15 @@ struct General;
 struct Owner;
 
 #[group]
+#[required_permissions("ADMINISTRATOR")]
 #[commands(clear, kick, ban)]
 #[description = "Server management."]
 struct Moderation;
-
 
 #[help]
 #[individual_command_tip = "Hello! This is a JLCPCB component stock checker bot\n\n\
 If you want more information about a specific command, just pass the command as argument."]
 #[command_not_found_text = "Could not find command: `{}`."]
-#[lacking_permissions = "Hide"]
 #[lacking_role = "Nothing"]
 #[wrong_channel = "Strike"]
 
@@ -236,8 +236,6 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
     }
 }
 
-
-
 #[tokio::main]
 async fn main() {
     dotenv::dotenv().expect("Failed to load .env file");
@@ -298,5 +296,3 @@ async fn main() {
         println!("Client error: {:?}", why);
     }
 }
-
-

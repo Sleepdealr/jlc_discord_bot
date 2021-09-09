@@ -225,3 +225,27 @@ async fn stats(ctx: &Context, msg: &Message) -> CommandResult {
 
     Ok(())
 }
+
+// Old scheduling loop
+//
+// let data_read = ctx.data.read().await;
+// if data_read
+// .get::<BotCtl>()
+// .expect("Expected bot toggle")
+// .load(Ordering::Relaxed)
+// {
+// let mut component_list: Components = read_components_json("config/components.json");
+// for component in &mut component_list.components {
+// if component.enabled {
+// let data = print_stock_data(Arc::clone(&ctx1), component).await;
+// println!("Sent stock for {}", component.name);
+// component.prev_stock = data;
+// }
+// }
+// serde_json::to_writer_pretty(
+// &File::create("config/components.json").expect("File creation error"),
+// &component_list,
+// )
+// .expect("Error writing file");
+// tokio::time::sleep(Duration::from_secs(86400)).await;
+// }

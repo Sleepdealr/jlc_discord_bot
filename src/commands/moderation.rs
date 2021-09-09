@@ -52,26 +52,28 @@ async fn clear(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 }
 
 #[command]
-#[required_permissions(BAN_MEMBERS)]
 #[description("Bans people. (limit one at a time)")]
 async fn ban(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let to_parse = args.single_quoted::<String>()?;
-    let member = get_members(ctx, msg,to_parse).await;
+    let member = get_members(ctx, msg, to_parse).await;
 
     let reason = args.remains();
 
     match member {
         Ok(m) => {
-            if let Some(r) = reason{
-                m.ban_with_reason(ctx, 0,r).await?;
-                msg.channel_id.say(ctx, format!("banned `{}` because `{}`", m.user.tag(), r)).await?;
-            }
-            else{
+            if let Some(r) = reason {
+                m.ban_with_reason(ctx, 0, r).await?;
+                msg.channel_id
+                    .say(ctx, format!("banned `{}` because `{}`", m.user.tag(), r))
+                    .await?;
+            } else {
                 m.ban(ctx, 0).await?;
-                msg.channel_id.say(ctx, format!("banned `{}`, no reason given.", m.user.tag())).await?;
+                msg.channel_id
+                    .say(ctx, format!("banned `{}`, no reason given.", m.user.tag()))
+                    .await?;
             }
-        },
-        Err(why) => {return Err(CommandError::from(why.to_string()))}
+        }
+        Err(why) => return Err(CommandError::from(why.to_string())),
     }
 
     Ok(())
@@ -82,22 +84,25 @@ async fn ban(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 #[description("Kicks people. (limit one at a time)")]
 async fn kick(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let to_parse = args.single_quoted::<String>()?;
-    let member = get_members(ctx, msg,to_parse).await;
+    let member = get_members(ctx, msg, to_parse).await;
 
     let reason = args.remains();
 
     match member {
         Ok(m) => {
-            if let Some(r) = reason{
+            if let Some(r) = reason {
                 m.kick_with_reason(ctx, r).await?;
-                msg.channel_id.say(ctx, format!("kicked `{}` because `{}`", m.user.tag(), r)).await?;
-            }
-            else{
+                msg.channel_id
+                    .say(ctx, format!("kicked `{}` because `{}`", m.user.tag(), r))
+                    .await?;
+            } else {
                 m.kick(ctx).await?;
-                msg.channel_id.say(ctx, format!("kicked `{}`, no reason given.", m.user.tag())).await?;
+                msg.channel_id
+                    .say(ctx, format!("kicked `{}`, no reason given.", m.user.tag()))
+                    .await?;
             }
-        },
-        Err(why) => {return Err(CommandError::from(why.to_string()))}
+        }
+        Err(why) => return Err(CommandError::from(why.to_string())),
     }
 
     Ok(())
