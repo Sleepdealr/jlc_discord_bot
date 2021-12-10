@@ -2,3 +2,4 @@
 /.idea
 .env
 jlc_discord_bot.iml
+config/components.json
