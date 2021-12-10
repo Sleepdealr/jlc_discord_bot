@@ -13,7 +13,7 @@
       "lcsc": "C44854",
       "enabled": true,
       "channel_id": 877779984448638976,
-      "prev_stock": 2,
+      "prev_stock": 0,
       "role_id": 878011956475359273
     },
     {
@@ -45,7 +45,7 @@
       "lcsc": "C60420",
       "enabled": true,
       "channel_id": 885511635484160053,
-      "prev_stock": 0,
+      "prev_stock": 166,
       "role_id": 0
     },
     {
@@ -117,7 +117,7 @@
       "lcsc": "C2040",
       "enabled": true,
       "channel_id": 892773339217662003,
-      "prev_stock": 288,
+      "prev_stock": 263,
       "role_id": 0
     },
     {
@@ -125,7 +125,7 @@
       "lcsc": "C74524",
       "enabled": true,
       "channel_id": 885511840338174063,
-      "prev_stock": 1,
+      "prev_stock": 0,
       "role_id": 0
     },
     {
@@ -133,7 +133,7 @@
       "lcsc": "C266230",
       "enabled": true,
       "channel_id": 918889873849593986,
-      "prev_stock": 1,
+      "prev_stock": 0,
       "role_id": 0
     },
     {
@@ -141,9 +141,25 @@
       "lcsc": "C85573",
       "enabled": true,
       "channel_id": 918889873849593986,
-      "prev_stock": 1,
+      "prev_stock": 96,
       "role_id": 0
     }
-
+  ,
+    {
+      "name": "OH49E-S",
+      "lcsc": "C85573",
+      "enabled": true,
+      "channel_id": 918889873849593986,
+      "prev_stock": 96,
+      "role_id": 0
+    },
+    {
+      "name": "Atmega32u4-MUR",
+      "lcsc": "C45874",
+      "enabled": true,
+      "channel_id": 877779984448638976,
+      "prev_stock": 0,
+      "role_id": 878011956475359273
+    }
   ]
 }
