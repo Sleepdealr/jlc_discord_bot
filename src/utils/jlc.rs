@@ -5,6 +5,7 @@ use chrono::Utc;
 use serde_json::Value;
 use serenity::model::id::ChannelId;
 use serenity::prelude::*;
+use serenity::utils::{Color, Colour};
 
 use crate::keys::{Component, Components, Data};
 
@@ -23,7 +24,7 @@ pub async fn get_jlc_stock(lcsc: &str) -> Result<Data, reqwest::Error> {
         .await?;
 
     let jlc_stock = response["data"]["componentPageInfo"]["list"][0]["stockCount"]
-        .as_u64()
+        .as_i64()
         .unwrap();
 
     let image_url = response["data"]["componentPageInfo"]["list"][0]["componentImageUrl"]
@@ -37,10 +38,22 @@ pub async fn get_jlc_stock(lcsc: &str) -> Result<Data, reqwest::Error> {
     Ok(data)
 }
 
-pub async fn print_stock_data(ctx: Arc<Context>, component: &Component) -> u64 {
+pub async fn print_stock_data(ctx: Arc<Context>, component: &Component) -> i64 {
     let data = get_jlc_stock(&component.lcsc)
         .await
         .expect("Error getting stock data");
+    let change = data.stock - component.prev_stock;
+    let increase = if change.is_positive() {
+        "+"
+    }else{
+        ""
+    };
+    let color  = if change.is_positive() {
+        0x00ff00
+    }else{
+       0xff0000
+    };
+
     if data.stock != component.prev_stock {
         if let Err(why) = ChannelId(component.channel_id)
             .send_message(&ctx, |m| {
@@ -49,9 +62,10 @@ pub async fn print_stock_data(ctx: Arc<Context>, component: &Component) -> u64 {
                         "https://jlcpcb.com/parts/componentSearch?isSearch=true&searchTxt={}",
                         component.lcsc
                     ));
+                    e.colour(color);
                     e.thumbnail(&data.image_url);
                     e.timestamp(&Utc::now());
-                    e.field("Stock", format!("{}", data.stock), false);
+                    e.field("Stock", format!("{stock} ({increase}{value})",stock = data.stock, value = change, increase = increase ), false);
                     e.field("Previous Stock", component.prev_stock, false);
                     e.field("LCSC Number", component.lcsc.as_str(), false);
                     e

@@ -19,8 +19,10 @@ async fn echo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             .clean_role(false)
     };
 
-    let content = content_safe(&ctx.cache, &args.rest(), &settings).await;
-
+    let mut content = content_safe(&ctx.cache, &args.rest(), &settings).await;
+    if content.eq("deez") {
+        content = "nuts".to_string();
+    }
     msg.channel_id.say(&ctx.http, &content).await?;
 
     Ok(())

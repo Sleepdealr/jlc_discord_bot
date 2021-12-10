@@ -45,7 +45,7 @@
       "lcsc": "C60420",
       "enabled": true,
       "channel_id": 885511635484160053,
-      "prev_stock": 166,
+      "prev_stock": 164,
       "role_id": 0
     },
     {
@@ -141,16 +141,7 @@
       "lcsc": "C85573",
       "enabled": true,
       "channel_id": 918889873849593986,
-      "prev_stock": 96,
-      "role_id": 0
-    }
-  ,
-    {
-      "name": "OH49E-S",
-      "lcsc": "C85573",
-      "enabled": true,
-      "channel_id": 918889873849593986,
-      "prev_stock": 96,
+      "prev_stock": 94,
       "role_id": 0
     },
     {
@@ -158,7 +149,7 @@
       "lcsc": "C45874",
       "enabled": true,
       "channel_id": 877779984448638976,
-      "prev_stock": 0,
+      "prev_stock": 1665,
       "role_id": 878011956475359273
     }
   ]

@@ -25,7 +25,7 @@ impl TypeMapKey for Uptime {
 }
 
 pub struct Data {
-    pub stock: u64,
+    pub stock: i64,
     pub image_url: String,
 }
 
@@ -35,7 +35,7 @@ pub struct Component {
     pub lcsc: String,
     pub enabled: bool,
     pub channel_id: u64,
-    pub prev_stock: u64,
+    pub prev_stock: i64,
     pub role_id: u64,
 }
 
