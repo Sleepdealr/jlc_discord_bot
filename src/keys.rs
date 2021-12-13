@@ -14,7 +14,6 @@ impl TypeMapKey for ShardManagerContainer {
 }
 
 pub struct BotCtl;
-
 impl TypeMapKey for BotCtl {
     type Value = AtomicBool;
 }

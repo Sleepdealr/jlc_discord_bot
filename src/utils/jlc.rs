@@ -5,7 +5,6 @@ use chrono::Utc;
 use serde_json::Value;
 use serenity::model::id::ChannelId;
 use serenity::prelude::*;
-use serenity::utils::{Color, Colour};
 
 use crate::keys::{Component, Components, Data};
 

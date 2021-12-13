@@ -37,7 +37,7 @@ use std::{
 use std::collections::HashMap;
 use std::fs::File;
 
-use chrono::Utc;
+use chrono::{Utc};
 use serenity::{
     async_trait,
     framework::standard::{
@@ -82,6 +82,7 @@ impl EventHandler for Handler {
         if !self.is_loop_running.load(Ordering::Relaxed) {
             let ctx1 = Arc::clone(&ctx);
             tokio::spawn(async move {
+                // Loop will execute once on startup and THEN sleep for necessary time
                 loop {
                     let data_read = ctx.data.read().await;
                     if data_read
@@ -104,7 +105,16 @@ impl EventHandler for Handler {
                         )
                             .expect("Error writing file");
                     }
-                    tokio::time::sleep(Duration::from_secs(86400)).await;
+
+                    let now = chrono::Local::now();
+                    let mut exe_time = (now).date().and_hms(10, 0, 0); // Possible HH:MM:SS today, Could be BEFORE now
+                    if exe_time < now {
+                        // If date is before now, the duration_since method will fail, because Durations cannot be negative
+                        exe_time = exe_time + chrono::Duration::days(1); // Add 1 day to the exe_time to get next possible time
+                    }
+                    let duration = exe_time.signed_duration_since(now).to_std().unwrap().as_secs();
+                    println!("Sleeping for {}s" , duration);
+                    tokio::time::sleep(Duration::from_secs(duration)).await;
                 }
             });
 
