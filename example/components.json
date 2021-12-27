@@ -45,7 +45,7 @@
       "lcsc": "C60420",
       "enabled": true,
       "channel_id": 885511635484160053,
-      "prev_stock": 164,
+      "prev_stock": 0,
       "role_id": 0
     },
     {
@@ -117,7 +117,7 @@
       "lcsc": "C2040",
       "enabled": true,
       "channel_id": 892773339217662003,
-      "prev_stock": 263,
+      "prev_stock": 209,
       "role_id": 0
     },
     {
@@ -141,7 +141,7 @@
       "lcsc": "C85573",
       "enabled": true,
       "channel_id": 918889873849593986,
-      "prev_stock": 94,
+      "prev_stock": 1635,
       "role_id": 0
     },
     {
@@ -149,8 +149,24 @@
       "lcsc": "C45874",
       "enabled": true,
       "channel_id": 877779984448638976,
-      "prev_stock": 1665,
+      "prev_stock": 8,
       "role_id": 878011956475359273
+    },
+    {
+      "name": "STM32F303CBT6",
+      "lcsc": "C108516",
+      "enabled": true,
+      "channel_id": 925087485833396244,
+      "prev_stock": 42,
+      "role_id": 0
+    },
+    {
+      "name": "JST-SH-4Pin",
+      "lcsc": "C145956",
+      "enabled": true,
+      "channel_id": 877780102065315870,
+      "prev_stock": 4904,
+      "role_id": 0
     }
   ]
 }

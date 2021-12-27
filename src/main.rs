@@ -7,9 +7,9 @@
 //      - Link to product page - COMPLETE
 //      - Image in Embed - COMPLETE
 //
-// TODO - Time utilities - Probably not going to do this since it's so goddamn annoying
-//  - Set bot to execute at a specific time
-//  - Set status to time until next update
+// TODO - Time utilities - COMPLETE
+//  - Set bot to execute at a specific time - COMPLETE
+//  - Set status to time until next update - REJECTED
 //
 // TODO: Command utilities
 //  - Add command to toggle everything - COMPLETE
@@ -21,9 +21,6 @@
 //  - If previous component stock was 0, ping role with message - COMPLETE
 //  - If previous component stock has not changed, do not send a message - COMPLETE
 
-#[macro_use]
-extern crate log;
-extern crate pretty_env_logger;
 
 use std::{
     collections::HashSet,
@@ -48,10 +45,14 @@ use serenity::{
     http::Http,
     model::{
         channel::Message,
-        gateway::Ready,
+        gateway::{Ready , Activity},
         id::{GuildId, UserId},
     },
     prelude::*,
+};
+use log::{
+    error,
+    info
 };
 use serenity::model::event::ResumedEvent;
 
@@ -117,18 +118,6 @@ impl EventHandler for Handler {
                     tokio::time::sleep(Duration::from_secs(duration)).await;
                 }
             });
-
-            // FIXME: SET STATUS HERE
-            // let ctx2 = Arc::clone(&ctx);
-            // tokio::spawn(async move {
-            //     loop {
-            //         // set_status_to_current_time(Arc::clone(&ctx2)).await;
-            //         // println!("Updated status");
-            //         // tokio::time::sleep(Duration::from_secs(60)).await;
-            //
-            //     }
-            // });
-
             self.is_loop_running.swap(true, Ordering::Relaxed);
         }
     }
@@ -151,6 +140,7 @@ impl EventHandler for Handler {
             }
             None => error!("Unable to insert boot time into client data."),
         };
+        ctx.set_activity(Activity::watching("JLC's stock")).await;
     }
 
     async fn resume(&self, _: Context, _: ResumedEvent) {
