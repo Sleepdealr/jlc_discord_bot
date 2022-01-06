@@ -117,7 +117,7 @@
       "lcsc": "C2040",
       "enabled": true,
       "channel_id": 892773339217662003,
-      "prev_stock": 209,
+      "prev_stock": 5866,
       "role_id": 0
     },
     {
@@ -125,7 +125,7 @@
       "lcsc": "C74524",
       "enabled": true,
       "channel_id": 885511840338174063,
-      "prev_stock": 0,
+      "prev_stock": 2,
       "role_id": 0
     },
     {
@@ -141,7 +141,7 @@
       "lcsc": "C85573",
       "enabled": true,
       "channel_id": 918889873849593986,
-      "prev_stock": 1635,
+      "prev_stock": 492,
       "role_id": 0
     },
     {
@@ -149,7 +149,7 @@
       "lcsc": "C45874",
       "enabled": true,
       "channel_id": 877779984448638976,
-      "prev_stock": 8,
+      "prev_stock": 2212,
       "role_id": 878011956475359273
     },
     {
@@ -157,7 +157,7 @@
       "lcsc": "C108516",
       "enabled": true,
       "channel_id": 925087485833396244,
-      "prev_stock": 42,
+      "prev_stock": 3026,
       "role_id": 0
     },
     {
@@ -165,7 +165,31 @@
       "lcsc": "C145956",
       "enabled": true,
       "channel_id": 877780102065315870,
-      "prev_stock": 4904,
+      "prev_stock": 2456,
+      "role_id": 0
+    },
+    {
+      "name": "AH49ENTR-G1",
+      "lcsc": "C314698",
+      "enabled": true,
+      "channel_id": 918889873849593986,
+      "prev_stock": 4817,
+      "role_id": 0
+    },
+    {
+      "name": "STM32F303RBT6",
+      "lcsc": "C130453",
+      "enabled": true,
+      "channel_id": 925087485833396244,
+      "prev_stock": 2226,
+      "role_id": 0
+    },
+    {
+      "name": "ATMEGA32A-AU",
+      "lcsc": "C5659",
+      "enabled": true,
+      "channel_id": 928667890410979408,
+      "prev_stock": 407,
       "role_id": 0
     }
   ]
