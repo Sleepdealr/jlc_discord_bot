@@ -42,15 +42,11 @@ pub async fn print_stock_data(ctx: Arc<Context>, component: &Component) -> i64 {
         .await
         .expect("Error getting stock data");
     let change = data.stock - component.prev_stock;
-    let increase = if change.is_positive() {
-        "+"
-    }else{
-        ""
-    };
-    let color  = if change.is_positive() {
+    let increase = if change.is_positive() { "+" } else { "" };
+    let color = if change.is_positive() {
         0x00ff00
-    }else{
-       0xff0000
+    } else {
+        0xff0000
     };
 
     if data.stock != component.prev_stock {
@@ -64,7 +60,16 @@ pub async fn print_stock_data(ctx: Arc<Context>, component: &Component) -> i64 {
                     e.colour(color);
                     e.thumbnail(&data.image_url);
                     e.timestamp(&Utc::now());
-                    e.field("Stock", format!("{stock} ({increase}{value})",stock = data.stock, value = change, increase = increase ), false);
+                    e.field(
+                        "Stock",
+                        format!(
+                            "{stock} ({increase}{value})",
+                            stock = data.stock,
+                            value = change,
+                            increase = increase
+                        ),
+                        false,
+                    );
                     e.field("Previous Stock", component.prev_stock, false);
                     e.field("LCSC Number", component.lcsc.as_str(), false);
                     e

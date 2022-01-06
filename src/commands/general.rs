@@ -1,7 +1,7 @@
 // General purpose commands
 
 use serenity::{
-    framework::standard::{Args, CommandResult, macros::command},
+    framework::standard::{macros::command, Args, CommandResult},
     model::channel::Message,
     prelude::*,
     utils::{content_safe, ContentSafeOptions},

@@ -1,16 +1,16 @@
 use std::sync::atomic::Ordering;
 
 use heim::{memory, process, units};
+use serenity::framework::standard::CommandOptions;
+use serenity::framework::standard::Reason;
 use serenity::{
     framework::standard::{
-        Args,
-        CommandResult, macros::{check, command},
+        macros::{check, command},
+        Args, CommandResult,
     },
     model::channel::Message,
     prelude::*,
 };
-use serenity::framework::standard::CommandOptions;
-use serenity::framework::standard::Reason;
 use timeago;
 use tokio::time;
 

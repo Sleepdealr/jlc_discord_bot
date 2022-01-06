@@ -1,10 +1,10 @@
+use serenity::framework::standard::macros::command;
 use serenity::{
-    Error,
     framework::standard::{Args, CommandError, CommandResult},
     model::prelude::*,
     prelude::*,
+    Error,
 };
-use serenity::framework::standard::macros::command;
 
 use crate::utils::users::get_members;
 

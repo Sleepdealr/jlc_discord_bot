@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -46,13 +46,10 @@ pub struct Components {
 #[derive(Serialize, Deserialize)]
 pub struct Role {
     pub role_name: String,
-    pub role_id: u64
+    pub role_id: u64,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct Roles {
     pub roles: Vec<Role>,
 }
-
-
-
