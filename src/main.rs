@@ -287,7 +287,7 @@ async fn main() {
 
     {
         let mut data = client.data.write().await;
-        data.insert::<BotCtl>(AtomicBool::new(false));
+        data.insert::<BotCtl>(AtomicBool::new(true));
         data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager));
         data.insert::<keys::Uptime>(HashMap::default());
     }
