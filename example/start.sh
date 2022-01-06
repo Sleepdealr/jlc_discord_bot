@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Pulls from git
+# Comment out to disable
+git pull
+
+# Format project
+cargo fmt
 
 # Sources cargo env
 . "/home/[username]/.cargo/env"
