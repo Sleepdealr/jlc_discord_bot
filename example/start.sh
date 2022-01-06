@@ -4,11 +4,13 @@
 # Comment out to disable
 git pull
 
-# Format project
-cargo fmt
+
 
 # Sources cargo env
 . "/home/[username]/.cargo/env"
+
+# Format project
+cargo fmt
 
 # Runs cargo directly
 /home/[username]/.cargo/bin/cargo run --release
