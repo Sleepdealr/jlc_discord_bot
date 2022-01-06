@@ -14,47 +14,43 @@
 // TODO: Command utilities
 //  - Add command to toggle everything - COMPLETE
 //  - Add command to toggle specific components
-//  - Add removal/addition of components with commands
+//  - Add addition of components with commands COMPLETE
 //
 // TODO: Implement JSON - COMPLETE
 //  - Use JSON or other file format to contain components/channels/roles/previous stock - COMPLETE
 //  - If previous component stock was 0, ping role with message - COMPLETE
 //  - If previous component stock has not changed, do not send a message - COMPLETE
 
-
+use std::collections::HashMap;
+use std::fs::File;
 use std::{
     collections::HashSet,
     env,
     sync::{
-        Arc,
         atomic::{AtomicBool, Ordering},
+        Arc,
     },
     time::Duration,
 };
-use std::collections::HashMap;
-use std::fs::File;
 
-use chrono::{Utc};
+use chrono::Utc;
+use log::{error, info};
+use serenity::model::event::ResumedEvent;
 use serenity::{
     async_trait,
     framework::standard::{
-        Args,
-        CommandGroup,
-        CommandResult, DispatchError, help_commands, HelpOptions, macros::{group, help, hook}, StandardFramework,
+        help_commands,
+        macros::{group, help, hook},
+        Args, CommandGroup, CommandResult, DispatchError, HelpOptions, StandardFramework,
     },
     http::Http,
     model::{
         channel::Message,
-        gateway::{Ready , Activity},
+        gateway::{Activity, Ready},
         id::{GuildId, UserId},
     },
     prelude::*,
 };
-use log::{
-    error,
-    info
-};
-use serenity::model::event::ResumedEvent;
 
 use commands::general::*;
 use commands::jlc::*;
@@ -104,7 +100,7 @@ impl EventHandler for Handler {
                             &File::create("config/components.json").expect("File creation error"),
                             &component_list,
                         )
-                            .expect("Error writing file");
+                        .expect("Error writing file");
                     }
 
                     let now = chrono::Local::now();
@@ -113,8 +109,12 @@ impl EventHandler for Handler {
                         // If date is before now, the duration_since method will fail, because Durations cannot be negative
                         exe_time = exe_time + chrono::Duration::days(1); // Add 1 day to the exe_time to get next possible time
                     }
-                    let duration = exe_time.signed_duration_since(now).to_std().unwrap().as_secs();
-                    println!("Sleeping for {}s" , duration);
+                    let duration = exe_time
+                        .signed_duration_since(now)
+                        .to_std()
+                        .unwrap()
+                        .as_secs();
+                    println!("Sleeping for {}s", duration);
                     tokio::time::sleep(Duration::from_secs(duration)).await;
                 }
             });
@@ -156,7 +156,7 @@ struct General;
 #[owners_only]
 #[only_in(guilds)]
 #[summary = "Commands for server owners"]
-#[commands(toggle_bot)]
+#[commands(toggle_bot, add_component)]
 struct Owner;
 
 #[group]
@@ -287,7 +287,7 @@ async fn main() {
 
     {
         let mut data = client.data.write().await;
-        data.insert::<BotCtl>(AtomicBool::new(true));
+        data.insert::<BotCtl>(AtomicBool::new(false));
         data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager));
         data.insert::<keys::Uptime>(HashMap::default());
     }
