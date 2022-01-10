@@ -4,8 +4,6 @@
 # Comment out to disable
 git pull
 
-
-
 # Sources cargo env
 . "/home/[username]/.cargo/env"
 

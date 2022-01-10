@@ -1,4 +1,4 @@
-use crate::Component;
+use crate::{Component, jlc_stock_check};
 use chrono::Utc;
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
@@ -6,6 +6,7 @@ use serenity::{
     prelude::*,
 };
 use std::fs::File;
+use std::sync::Arc;
 
 use crate::utils::jlc::read_components_json;
 
@@ -59,5 +60,12 @@ async fn add_component(ctx: &Context, msg: &Message, args: Args) -> CommandResul
     )
     .expect("Error writing file");
     msg.channel_id.say(&ctx.http, "Created component").await?;
+    Ok(())
+}
+
+#[command]
+async fn check_jlc(ctx: &Context, _msg: &Message) -> CommandResult {
+    let arc = ctx.clone();
+    jlc_stock_check(Arc::new(arc)).await;
     Ok(())
 }

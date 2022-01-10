@@ -1,12 +1,12 @@
 use std::fs;
+use std::fs::File;
 use std::sync::Arc;
 
+use crate::keys::{Component, Components, Data};
 use chrono::Utc;
 use serde_json::Value;
 use serenity::model::id::ChannelId;
 use serenity::prelude::*;
-
-use crate::keys::{Component, Components, Data};
 
 pub fn read_components_json(path: &str) -> Components {
     let file = fs::File::open(path).expect("file should open read only");
@@ -26,10 +26,12 @@ pub async fn get_jlc_stock(lcsc: &str) -> Result<Data, reqwest::Error> {
         .as_i64()
         .unwrap();
 
+    // Error handling on image isn't necessary since it should have one if it has stock
     let image_url = response["data"]["componentPageInfo"]["list"][0]["componentImageUrl"]
         .as_str()
         .unwrap()
         .to_string();
+
     let data = Data {
         stock: jlc_stock,
         image_url,
@@ -37,10 +39,15 @@ pub async fn get_jlc_stock(lcsc: &str) -> Result<Data, reqwest::Error> {
     Ok(data)
 }
 
-pub async fn print_stock_data(ctx: Arc<Context>, component: &Component) -> i64 {
-    let data = get_jlc_stock(&component.lcsc)
-        .await
-        .expect("Error getting stock data");
+pub async fn print_stock_data(
+    ctx: Arc<Context>,
+    component: &Component,
+) -> Result<i64, reqwest::Error> {
+    let request = get_jlc_stock(&component.lcsc).await;
+    let data = match request {
+        Ok(res) => res,
+        Err(e) => return Err(e),
+    };
     let change = data.stock - component.prev_stock;
     let increase = if change.is_positive() { "+" } else { "" };
     let color = if change.is_positive() {
@@ -87,5 +94,25 @@ pub async fn print_stock_data(ctx: Arc<Context>, component: &Component) -> i64 {
             .expect("Error");
         println!("Pinged role for {}", component.name);
     }
-    data.stock
+    Ok(data.stock)
+}
+
+pub async fn jlc_stock_check(ctx: Arc<Context>) {
+    let mut component_list: Components = read_components_json("config/components.json");
+    for component in &mut component_list.components {
+        if component.enabled {
+            let response = print_stock_data(Arc::clone(&ctx), component).await;
+            let data = match response {
+                Ok(data) => data,
+                Err(_err) => continue,
+            };
+            println!("Sent stock for {}, Stock:{}", component.name, data);
+            component.prev_stock = data;
+        }
+    }
+    serde_json::to_writer_pretty(
+        &File::create("config/components.json").expect("File creation error"),
+        &component_list,
+    )
+    .expect("Error writing file");
 }

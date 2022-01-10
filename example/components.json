@@ -33,14 +33,6 @@
       "role_id": 0
     },
     {
-      "name": "IS31FL3737",
-      "lcsc": "C2678568",
-      "enabled": true,
-      "channel_id": 880253293664829482,
-      "prev_stock": 0,
-      "role_id": 0
-    },
-    {
       "name": "STM32F411CEU6",
       "lcsc": "C60420",
       "enabled": true,

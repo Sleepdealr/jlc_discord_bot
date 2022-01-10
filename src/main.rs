@@ -22,7 +22,6 @@
 //  - If previous component stock has not changed, do not send a message - COMPLETE
 
 use std::collections::HashMap;
-use std::fs::File;
 use std::{
     collections::HashSet,
     env,
@@ -59,7 +58,7 @@ use commands::moderation::*;
 use commands::roles::*;
 use keys::*;
 
-use crate::utils::jlc::{print_stock_data, read_components_json};
+use crate::utils::jlc::jlc_stock_check;
 
 #[macro_use]
 mod utils;
@@ -76,7 +75,8 @@ impl EventHandler for Handler {
     async fn cache_ready(&self, ctx: Context, _guilds: Vec<GuildId>) {
         println!("Cache built successfully!");
         let ctx = Arc::new(ctx);
-        if !self.is_loop_running.load(Ordering::Relaxed) {
+
+        if self.is_loop_running.load(Ordering::Relaxed) {
             let ctx1 = Arc::clone(&ctx);
             tokio::spawn(async move {
                 // Loop will execute once on startup and THEN sleep for necessary time
@@ -87,20 +87,7 @@ impl EventHandler for Handler {
                         .expect("Expected bot toggle")
                         .load(Ordering::Relaxed)
                     {
-                        let mut component_list: Components =
-                            read_components_json("config/components.json");
-                        for component in &mut component_list.components {
-                            if component.enabled {
-                                let data = print_stock_data(Arc::clone(&ctx1), component).await;
-                                println!("Sent stock for {}", component.name);
-                                component.prev_stock = data;
-                            }
-                        }
-                        serde_json::to_writer_pretty(
-                            &File::create("config/components.json").expect("File creation error"),
-                            &component_list,
-                        )
-                        .expect("Error writing file");
+                        jlc_stock_check(Arc::clone(&ctx1)).await;
                     }
 
                     let now = chrono::Local::now();
@@ -156,7 +143,7 @@ struct General;
 #[owners_only]
 #[only_in(guilds)]
 #[summary = "Commands for server owners"]
-#[commands(toggle_bot, add_component)]
+#[commands(toggle_bot, add_component, check_jlc)]
 struct Owner;
 
 #[group]
@@ -279,7 +266,7 @@ async fn main() {
 
     let mut client = Client::builder(&token)
         .event_handler(Handler {
-            is_loop_running: AtomicBool::new(false),
+            is_loop_running: AtomicBool::new(true),
         })
         .framework(framework)
         .await
