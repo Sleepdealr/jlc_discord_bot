@@ -266,7 +266,7 @@ async fn main() {
 
     let mut client = Client::builder(&token)
         .event_handler(Handler {
-            is_loop_running: AtomicBool::new(false),
+            is_loop_running: AtomicBool::new(true),
         })
         .framework(framework)
         .await
