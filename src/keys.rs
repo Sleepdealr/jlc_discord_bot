@@ -53,3 +53,14 @@ pub struct Role {
 pub struct Roles {
     pub roles: Vec<Role>,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct Datasheet {
+    pub name: String,
+    pub link: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Datasheets {
+    pub datasheets: Vec<Datasheet>,
+}

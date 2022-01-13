@@ -1,4 +1,5 @@
-use crate::{Component, jlc_stock_check};
+use crate::utils::jlc::{read_components_json, read_datasheet_json};
+use crate::{jlc_stock_check, Component, Datasheet, Datasheets};
 use chrono::Utc;
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
@@ -7,8 +8,6 @@ use serenity::{
 };
 use std::fs::File;
 use std::sync::Arc;
-
-use crate::utils::jlc::read_components_json;
 
 #[command]
 async fn list(ctx: &Context, msg: &Message) -> CommandResult {
@@ -67,5 +66,53 @@ async fn add_component(ctx: &Context, msg: &Message, args: Args) -> CommandResul
 async fn check_jlc(ctx: &Context, _msg: &Message) -> CommandResult {
     let arc = ctx.clone();
     jlc_stock_check(Arc::new(arc)).await;
+    Ok(())
+}
+
+#[command]
+async fn datasheets(ctx: &Context, msg: &Message) -> CommandResult {
+    let datasheet_list: Datasheets = read_datasheet_json("config/datasheets.json");
+    let mut embed_list: String = "".to_string();
+    for datasheet in datasheet_list.datasheets {
+        embed_list.push_str(&format!(
+            "[{text}]({url})\n",
+            text = datasheet.name,
+            url = datasheet.link
+        ));
+    }
+    if let Err(why) = msg
+        .channel_id
+        .send_message(&ctx, |m| {
+            m.embed(|e| {
+                e.title("Datasheets");
+                e.timestamp(&Utc::now());
+                e.field("Datasheets", embed_list, false);
+                e
+            })
+        })
+        .await
+    {
+        eprintln!("Error sending message: {:?}", why);
+    };
+    Ok(())
+}
+
+#[command]
+async fn add_datasheet(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    let arg_vec: Vec<_> = args.rest().split_whitespace().collect();
+    let name = arg_vec[0].to_string();
+    let link = arg_vec[1].to_string();
+
+    let new_datasheet = Datasheet { name, link };
+
+    let mut datasheet_list = read_datasheet_json("config/datasheets.json");
+    datasheet_list.datasheets.push(new_datasheet);
+
+    serde_json::to_writer_pretty(
+        &File::create("config/datasheets.json").expect("File creation error"),
+        &datasheet_list,
+    )
+    .expect("Error writing file");
+    msg.channel_id.say(&ctx.http, "Added datasheet").await?;
     Ok(())
 }

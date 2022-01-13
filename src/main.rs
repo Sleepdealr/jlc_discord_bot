@@ -136,14 +136,14 @@ impl EventHandler for Handler {
 }
 
 #[group]
-#[commands(echo, list, stats, iam, iamnot)]
+#[commands(echo, list, stats, iam, iamnot, datasheets)]
 struct General;
 
 #[group]
 #[owners_only]
 #[only_in(guilds)]
 #[summary = "Commands for server owners"]
-#[commands(toggle_bot, add_component, check_jlc)]
+#[commands(toggle_bot, add_component, check_jlc, add_datasheet)]
 struct Owner;
 
 #[group]
@@ -266,7 +266,7 @@ async fn main() {
 
     let mut client = Client::builder(&token)
         .event_handler(Handler {
-            is_loop_running: AtomicBool::new(true),
+            is_loop_running: AtomicBool::new(false),
         })
         .framework(framework)
         .await

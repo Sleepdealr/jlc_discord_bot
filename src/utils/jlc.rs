@@ -2,13 +2,19 @@ use std::fs;
 use std::fs::File;
 use std::sync::Arc;
 
-use crate::keys::{Component, Components, Data};
+use crate::keys::{Component, Components, Data, Datasheets};
 use chrono::Utc;
 use serde_json::Value;
 use serenity::model::id::ChannelId;
 use serenity::prelude::*;
 
+// Yeah I can probably use an enum for this
 pub fn read_components_json(path: &str) -> Components {
+    let file = fs::File::open(path).expect("file should open read only");
+    serde_json::from_reader(file).expect("file should be proper JSON")
+}
+
+pub fn read_datasheet_json(path: &str) -> Datasheets {
     let file = fs::File::open(path).expect("file should open read only");
     serde_json::from_reader(file).expect("file should be proper JSON")
 }

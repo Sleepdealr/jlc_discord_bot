@@ -1,0 +1,20 @@
+{
+  "datasheets": [
+    {
+      "name": "32u4/16u2",
+      "link": "https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7766-8-bit-AVR-ATmega16U4-32U4_Datasheet.pdf"
+    },
+    {
+      "name": "RP2040",
+      "link": "https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf"
+    },
+    {
+      "name": "Cherry MX",
+      "link": "https://cdn.sparkfun.com/datasheets/Components/Switches/MX%20Series.pdf"
+    },
+    {
+      "name": "USB-C Connector Spec",
+      "link": "https://www.usb.org/sites/default/files/USB%20Type-C%20Spec%20R2.0%20-%20August%202019.pdf"
+    }
+  ]
+}
