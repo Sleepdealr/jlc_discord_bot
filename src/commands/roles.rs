@@ -14,6 +14,9 @@ async fn iam(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
             if let Some(role) = guild.role_by_name(arg_role.as_str()) {
                 let mut member = guild.member(ctx, msg.author.id).await?;
                 member.add_role(ctx, role.id).await?;
+            } else {
+                msg.react(ctx, '👎').await?;
+                return Ok(())
             }
         }
     }
@@ -29,6 +32,9 @@ async fn iamnot(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
             if let Some(role) = guild.role_by_name(arg_role.as_str()) {
                 let mut member = guild.member(ctx, msg.author.id).await?;
                 member.remove_role(ctx, role.id).await?;
+            } else {
+                msg.react(ctx, '👎').await?;
+                return Ok(())
             }
         }
     }
