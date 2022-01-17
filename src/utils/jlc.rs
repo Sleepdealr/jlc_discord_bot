@@ -1,22 +1,30 @@
-use std::fs;
-use std::fs::File;
-use std::sync::Arc;
-
-use crate::keys::{Component, Components, Data, Datasheets};
+use crate::keys::{Component, Data};
 use chrono::Utc;
 use serde_json::Value;
 use serenity::model::id::ChannelId;
 use serenity::prelude::*;
+use std::sync::Arc;
 
-// Yeah I can probably use an enum for this
-pub fn read_components_json(path: &str) -> Components {
-    let file = fs::File::open(path).expect("file should open read only");
-    serde_json::from_reader(file).expect("file should be proper JSON")
+use crate::{DatabasePool, Datasheet};
+
+pub async fn get_components(ctx: &Context) -> Vec<Component> {
+    let data_read = ctx.data.read().await;
+    let pool = data_read.get::<DatabasePool>().unwrap();
+
+    let select = sqlx::query_as::<_, Component>("SELECT * FROM components");
+    let components: Vec<Component> = select.fetch_all(pool).await.unwrap();
+
+    components
 }
 
-pub fn read_datasheet_json(path: &str) -> Datasheets {
-    let file = fs::File::open(path).expect("file should open read only");
-    serde_json::from_reader(file).expect("file should be proper JSON")
+pub async fn read_datasheet_json(ctx: &Context) -> Vec<Datasheet> {
+    let data_read = ctx.data.read().await;
+    let pool = data_read.get::<DatabasePool>().unwrap();
+
+    let select = sqlx::query_as::<_, Datasheet>("SELECT * FROM datasheets");
+    let datasheets: Vec<Datasheet> = select.fetch_all(pool).await.unwrap();
+
+    datasheets
 }
 
 pub async fn get_jlc_stock(lcsc: &str) -> Result<Data, reqwest::Error> {
@@ -63,7 +71,7 @@ pub async fn print_stock_data(
     };
 
     if data.stock != component.prev_stock {
-        if let Err(why) = ChannelId(component.channel_id)
+        if let Err(why) = ChannelId(component.channel_id as u64)
             .send_message(&ctx, |m| {
                 m.embed(|e| {
                     e.title(&component.name).url(format!(
@@ -94,7 +102,7 @@ pub async fn print_stock_data(
         };
     }
     if component.prev_stock == 0 && data.stock > 0 && component.role_id != 0 {
-        ChannelId(component.channel_id)
+        ChannelId(component.channel_id as u64)
             .say(&ctx.http, format!("<@&{}>", component.role_id))
             .await
             .expect("Error");
@@ -104,21 +112,24 @@ pub async fn print_stock_data(
 }
 
 pub async fn jlc_stock_check(ctx: Arc<Context>) {
-    let mut component_list: Components = read_components_json("config/components.json");
-    for component in &mut component_list.components {
+    let component_list = get_components(&ctx).await;
+    let data_read = ctx.data.read().await;
+    let pool = data_read.get::<DatabasePool>().unwrap();
+
+    for component in component_list {
         if component.enabled {
-            let response = print_stock_data(Arc::clone(&ctx), component).await;
+            let response = print_stock_data(Arc::clone(&ctx), &component).await;
             let data = match response {
                 Ok(data) => data,
                 Err(_err) => continue,
             };
             println!("Sent stock for {}, Stock:{}", component.name, data);
-            component.prev_stock = data;
+            // binding params wasn't working
+            let update = format!(
+                "UPDATE components SET prev_stock = {} WHERE lcsc='{}'",
+                data, component.lcsc
+            );
+            sqlx::query(update.as_str()).execute(pool).await.unwrap();
         }
     }
-    serde_json::to_writer_pretty(
-        &File::create("config/components.json").expect("File creation error"),
-        &component_list,
-    )
-    .expect("Error writing file");
 }

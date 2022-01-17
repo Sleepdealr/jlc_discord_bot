@@ -6,6 +6,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serenity::client::bridge::gateway::ShardManager;
 use serenity::prelude::TypeMapKey;
+use sqlx::PgPool;
 use tokio::sync::Mutex;
 
 pub struct ShardManagerContainer;
@@ -28,14 +29,14 @@ pub struct Data {
     pub image_url: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, sqlx::FromRow)]
 pub struct Component {
     pub name: String,
     pub lcsc: String,
     pub enabled: bool,
-    pub channel_id: u64,
+    pub channel_id: i64,
     pub prev_stock: i64,
-    pub role_id: u64,
+    pub role_id: i64,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -54,7 +55,7 @@ pub struct Roles {
     pub roles: Vec<Role>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, sqlx::FromRow)]
 pub struct Datasheet {
     pub name: String,
     pub link: String,
@@ -63,4 +64,9 @@ pub struct Datasheet {
 #[derive(Serialize, Deserialize)]
 pub struct Datasheets {
     pub datasheets: Vec<Datasheet>,
+}
+
+pub struct DatabasePool;
+impl TypeMapKey for DatabasePool {
+    type Value = PgPool;
 }

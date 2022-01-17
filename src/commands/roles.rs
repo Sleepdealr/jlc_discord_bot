@@ -16,7 +16,7 @@ async fn iam(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                 member.add_role(ctx, role.id).await?;
             } else {
                 msg.react(ctx, '👎').await?;
-                return Ok(())
+                return Ok(());
             }
         }
     }
@@ -34,7 +34,7 @@ async fn iamnot(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                 member.remove_role(ctx, role.id).await?;
             } else {
                 msg.react(ctx, '👎').await?;
-                return Ok(())
+                return Ok(());
             }
         }
     }
