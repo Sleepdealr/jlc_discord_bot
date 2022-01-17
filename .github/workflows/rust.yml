@@ -19,4 +19,4 @@ jobs:
     - name: Install libssl
       run: sudo apt -y install libssl-dev
     - name: Build
-      run: cargo build --verbose --release
+      run: cargo build --release
