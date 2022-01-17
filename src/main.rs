@@ -51,6 +51,7 @@ use serenity::{
     prelude::*,
 };
 
+use crate::utils::database::obtain_postgres_pool;
 use commands::general::*;
 use commands::jlc::*;
 use commands::meta::*;
@@ -224,7 +225,7 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     dotenv::dotenv().expect("Failed to load .env file");
     let token = &env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
     let prefix = &env::var("PREFIX").expect("Expected a prefix in the environment.");
@@ -275,6 +276,10 @@ async fn main() {
     {
         let mut data = client.data.write().await;
         data.insert::<BotCtl>(AtomicBool::new(true));
+
+        let pg_pool = obtain_postgres_pool().await?;
+        data.insert::<DatabasePool>(pg_pool.clone());
+
         data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager));
         data.insert::<keys::Uptime>(HashMap::default());
     }
@@ -282,4 +287,6 @@ async fn main() {
     if let Err(why) = client.start().await {
         println!("Client error: {:?}", why);
     }
+
+    Ok(())
 }

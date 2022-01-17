@@ -20,6 +20,7 @@ memchr = '2.3.*'
 log = "0.4.14"
 pretty_env_logger = "0.4.0"
 
+sqlx = { version = "0.5", features = [ "runtime-tokio-rustls" , "postgres"] }
 
 [dependencies.serenity]
 version = "0.10.9"

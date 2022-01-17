@@ -1,7 +1,7 @@
 {
   "datasheets": [
     {
-      "name": "32u4/16u2",
+      "name": "32u4/16u4",
       "link": "https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7766-8-bit-AVR-ATmega16U4-32U4_Datasheet.pdf"
     },
     {

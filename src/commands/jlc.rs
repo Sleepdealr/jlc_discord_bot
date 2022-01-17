@@ -1,19 +1,19 @@
-use crate::utils::jlc::{read_components_json, read_datasheet_json};
-use crate::{jlc_stock_check, Component, Datasheet, Datasheets};
+use crate::utils::jlc::{get_components, read_datasheet_json};
+use crate::{jlc_stock_check, DatabasePool, Datasheet};
 use chrono::Utc;
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
     model::channel::Message,
     prelude::*,
 };
-use std::fs::File;
 use std::sync::Arc;
 
 #[command]
 async fn list(ctx: &Context, msg: &Message) -> CommandResult {
-    let component_list = read_components_json("config/components.json");
+    let component_list = get_components(ctx).await;
+
     let mut name_list: String = "".to_string();
-    for component in component_list.components {
+    for component in component_list {
         name_list.push_str(component.name.as_str());
         name_list.push_str("\n");
     }
@@ -37,28 +37,25 @@ async fn list(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 async fn add_component(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let arg_vec: Vec<_> = args.rest().split_whitespace().collect();
-    let product_name = arg_vec[0].to_string();
-    let lcsc_number = arg_vec[1].to_string();
-    let channel = arg_vec[2].parse::<u64>()?;
+    let name = arg_vec[0].to_string();
+    let lcsc = arg_vec[1].to_string();
+    let channel = arg_vec[2].parse::<i64>()?;
 
-    let new_component = Component {
-        name: product_name,
-        lcsc: lcsc_number,
-        enabled: true,
-        channel_id: channel,
-        prev_stock: 1,
-        role_id: 0,
-    };
+    let data_read = ctx.data.read().await;
+    let pool = data_read.get::<DatabasePool>().unwrap();
 
-    let mut component_list = read_components_json("config/components.json");
-    component_list.components.push(new_component);
-
-    serde_json::to_writer_pretty(
-        &File::create("config/components.json").expect("File creation error"),
-        &component_list,
+    sqlx::query!(
+        r#"
+        INSERT INTO components (name, lcsc, enabled, channel_id, prev_stock, role_id)
+        VALUES ($1 , $2 , $3 , $4 , $5 , $6)
+        "#,
+        name, lcsc, true, channel, 1, 0
     )
-    .expect("Error writing file");
+    .execute(pool)
+    .await?;
+
     msg.channel_id.say(&ctx.http, "Created component").await?;
+
     Ok(())
 }
 
@@ -71,9 +68,9 @@ async fn check_jlc(ctx: &Context, _msg: &Message) -> CommandResult {
 
 #[command]
 async fn datasheets(ctx: &Context, msg: &Message) -> CommandResult {
-    let datasheet_list: Datasheets = read_datasheet_json("config/datasheets.json");
+    let datasheet_list: Vec<Datasheet> = read_datasheet_json(ctx).await;
     let mut embed_list: String = "".to_string();
-    for datasheet in datasheet_list.datasheets {
+    for datasheet in datasheet_list {
         embed_list.push_str(&format!(
             "[{text}]({url})\n",
             text = datasheet.name,
@@ -103,16 +100,20 @@ async fn add_datasheet(ctx: &Context, msg: &Message, args: Args) -> CommandResul
     let name = arg_vec[0].to_string();
     let link = arg_vec[1].to_string();
 
-    let new_datasheet = Datasheet { name, link };
+    let data_read = ctx.data.read().await;
+    let pool = data_read.get::<DatabasePool>().unwrap();
 
-    let mut datasheet_list = read_datasheet_json("config/datasheets.json");
-    datasheet_list.datasheets.push(new_datasheet);
-
-    serde_json::to_writer_pretty(
-        &File::create("config/datasheets.json").expect("File creation error"),
-        &datasheet_list,
+    sqlx::query!(
+        r#"
+        INSERT INTO datasheets (name, link)
+        VALUES ($1 , $2)
+        "#,
+        name,
+        link
     )
-    .expect("Error writing file");
+    .execute(pool)
+    .await?;
+
     msg.channel_id.say(&ctx.http, "Added datasheet").await?;
     Ok(())
 }
