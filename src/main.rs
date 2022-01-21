@@ -31,6 +31,7 @@ use std::{
     },
     time::Duration,
 };
+use std::time::SystemTime;
 
 use chrono::Utc;
 use log::{error, info};
@@ -88,7 +89,9 @@ impl EventHandler for Handler {
                         .expect("Expected bot toggle")
                         .load(Ordering::Relaxed)
                     {
+                        let now = SystemTime::now();
                         jlc_stock_check(Arc::clone(&ctx1)).await;
+                        println!("Stock check took {}ms", now.elapsed().unwrap().as_millis());
                     }
 
                     let now = chrono::Local::now();

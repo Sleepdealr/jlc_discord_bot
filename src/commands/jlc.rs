@@ -46,7 +46,7 @@ async fn add_component(ctx: &Context, msg: &Message, args: Args) -> CommandResul
 
     sqlx::query!(
         r#"
-        INSERT INTO components (name, lcsc, enabled, channel_id, prev_stock, role_id)
+        INSERT INTO components (name, lcsc, enabled, channel_id, stock, role_id)
         VALUES ($1 , $2 , $3 , $4 , $5 , $6)
         "#,
         name, lcsc, true, channel, 1, 0

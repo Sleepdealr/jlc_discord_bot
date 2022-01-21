@@ -29,13 +29,13 @@ pub struct Data {
     pub image_url: String,
 }
 
-#[derive(Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Serialize, Deserialize, sqlx::FromRow, Clone)]
 pub struct Component {
     pub name: String,
     pub lcsc: String,
     pub enabled: bool,
     pub channel_id: i64,
-    pub prev_stock: i64,
+    pub stock: i64,
     pub role_id: i64,
 }
 
