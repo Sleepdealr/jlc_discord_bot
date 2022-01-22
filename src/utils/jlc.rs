@@ -126,6 +126,7 @@ pub async fn jlc_stock_check(ctx: Arc<Context>) {
     let component_list = get_components(&ctx).await;
     let data_read = ctx.data.read().await;
     let pool = data_read.get::<DatabasePool>().unwrap();
+
     let mut futures = vec![print_stock_data(Arc::clone(&ctx), component_list[0].clone())];
     futures.pop();
 

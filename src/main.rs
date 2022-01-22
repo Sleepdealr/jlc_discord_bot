@@ -13,7 +13,7 @@
 //
 // TODO: Command utilities
 //  - Add command to toggle everything - COMPLETE
-//  - Add command to toggle specific components
+//  - Add command to toggle specific components - COMPLETE
 //  - Add addition of components with commands COMPLETE
 //
 // TODO: Implement JSON - COMPLETE
@@ -147,7 +147,7 @@ struct General;
 #[owners_only]
 #[only_in(guilds)]
 #[summary = "Commands for server owners"]
-#[commands(toggle_bot, add_component, check_jlc, add_datasheet)]
+#[commands(toggle_bot, add_component, check_jlc, add_datasheet, disable)]
 struct Owner;
 
 #[group]

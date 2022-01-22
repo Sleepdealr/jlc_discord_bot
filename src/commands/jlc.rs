@@ -60,6 +60,32 @@ async fn add_component(ctx: &Context, msg: &Message, args: Args) -> CommandResul
 }
 
 #[command]
+async fn disable(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    let arg_vec: Vec<_> = args.rest().split_whitespace().collect();
+    let lcsc = arg_vec[0].to_string();
+
+    let data_read = ctx.data.read().await;
+    let pool = data_read.get::<DatabasePool>().unwrap();
+
+    let statement = format!("SELECT enabled FROM components WHERE lcsc = '{}'" , lcsc);
+    let select:(bool,) = sqlx::query_as(statement.as_str())
+        .fetch_one(pool)
+        .await?;
+    let enabled = !select.0;
+
+
+    let update = format!("UPDATE components SET enabled={} WHERE lcsc='{}'" , enabled , lcsc);
+
+    sqlx::query(update.as_str())
+        .execute(pool)
+        .await?;
+
+    msg.channel_id.say(&ctx.http, "Updated component").await?;
+
+    Ok(())
+}
+
+#[command]
 async fn check_jlc(ctx: &Context, _msg: &Message) -> CommandResult {
     let arc = ctx.clone();
     jlc_stock_check(Arc::new(arc)).await;
