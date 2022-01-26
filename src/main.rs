@@ -1,26 +1,3 @@
-// TODO: Basic functionality - COMPLETE
-//  - Read stock data from JLC site - COMPLETE
-//  - Iterate over all needed components - COMPLETE
-//  - Send this data to component's channels - COMPLETE
-//  - Ping roles if components is back in stock - COMPLETE
-//  - Add more info to embed - COMPLETE
-//      - Link to product page - COMPLETE
-//      - Image in Embed - COMPLETE
-//
-// TODO - Time utilities - COMPLETE
-//  - Set bot to execute at a specific time - COMPLETE
-//  - Set status to time until next update - REJECTED
-//
-// TODO: Command utilities
-//  - Add command to toggle everything - COMPLETE
-//  - Add command to toggle specific components - COMPLETE
-//  - Add addition of components with commands COMPLETE
-//
-// TODO: Implement JSON - COMPLETE
-//  - Use JSON or other file format to contain components/channels/roles/previous stock - COMPLETE
-//  - If previous component stock was 0, ping role with message - COMPLETE
-//  - If previous component stock has not changed, do not send a message - COMPLETE
-
 use std::collections::HashMap;
 use std::{
     collections::HashSet,

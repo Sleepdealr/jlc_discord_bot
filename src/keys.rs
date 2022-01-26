@@ -24,11 +24,6 @@ impl TypeMapKey for Uptime {
     type Value = HashMap<String, DateTime<Utc>>;
 }
 
-pub struct Data {
-    pub stock: i64,
-    pub image_url: String,
-}
-
 #[derive(Serialize, Deserialize, sqlx::FromRow, Clone)]
 pub struct Component {
     pub name: String,

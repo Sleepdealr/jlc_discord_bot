@@ -1,4 +1,4 @@
-use crate::keys::{Component, Data};
+use crate::keys::{Component};
 use chrono::Utc;
 use serde_json::Value;
 use serenity::model::id::ChannelId;
@@ -28,7 +28,8 @@ pub async fn read_datasheet_json(ctx: &Context) -> Vec<Datasheet> {
     datasheets
 }
 
-pub async fn get_jlc_stock(lcsc: &str) -> Result<Data, reqwest::Error> {
+pub async fn get_jlc_stock(lcsc: &str) -> Result<(i64, String, f64), reqwest::Error> {
+
     let response: Value = reqwest::Client::new()
         .post("https://jlcpcb.com/shoppingCart/smtGood/selectSmtComponentList")
         .json(&serde_json::json!({ "keyword": lcsc }))
@@ -47,11 +48,10 @@ pub async fn get_jlc_stock(lcsc: &str) -> Result<Data, reqwest::Error> {
         .unwrap()
         .to_string();
 
-    let data = Data {
-        stock: jlc_stock,
-        image_url,
-    };
-    Ok(data)
+    let price = response["data"]["componentPageInfo"]["list"][0]["componentPrices"][0]["productPrice"]
+        .as_f64()
+        .unwrap();
+    Ok((jlc_stock,image_url,price))
 }
 
 pub async fn print_stock_data(
@@ -63,7 +63,7 @@ pub async fn print_stock_data(
         Ok(res) => res,
         Err(e) => return Err(e),
     };
-    let change = data.stock - component.stock;
+    let change = data.0 - component.stock;
     let increase = if change.is_positive() { "+" } else { "" };
     let color = if change.is_positive() {
         0x00ff00
@@ -71,7 +71,7 @@ pub async fn print_stock_data(
         0xff0000
     };
 
-    if data.stock != component.stock {
+    if data.0 != component.stock {
         if let Err(why) = ChannelId(component.channel_id as u64)
             .send_message(&ctx, |m| {
                 m.embed(|e| {
@@ -80,13 +80,13 @@ pub async fn print_stock_data(
                         component.lcsc
                     ));
                     e.colour(color);
-                    e.thumbnail(&data.image_url);
+                    e.thumbnail(&data.1);
                     e.timestamp(&Utc::now());
                     e.field(
                         "Stock",
                         format!(
                             "{stock} ({increase}{value})",
-                            stock = data.stock,
+                            stock = data.0,
                             value = change,
                             increase = increase
                         ),
@@ -94,6 +94,7 @@ pub async fn print_stock_data(
                     );
                     e.field("Previous Stock", component.stock, false);
                     e.field("LCSC Number", component.lcsc.as_str(), false);
+                    e.field("Price", data.2, false);
                     e
                 })
             })
@@ -102,7 +103,7 @@ pub async fn print_stock_data(
             eprintln!("Error sending message: {:?}", why);
         };
     }
-    if component.stock == 0 && data.stock > 0 && component.role_id != 0 {
+    if component.stock == 0 && data.0 > 0 && component.role_id != 0 {
         ChannelId(component.channel_id as u64)
             .say(&ctx.http, format!("<@&{}>", component.role_id))
             .await
@@ -111,7 +112,7 @@ pub async fn print_stock_data(
     }
 
     let new = Component {
-        stock: data.stock,
+        stock: data.0,
 
         name: component.name.clone(),
         lcsc: component.lcsc.clone(),
