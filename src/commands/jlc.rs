@@ -35,11 +35,10 @@ async fn list(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
-async fn add_component(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    let arg_vec: Vec<_> = args.rest().split_whitespace().collect();
-    let name = arg_vec[0].to_string();
-    let lcsc = arg_vec[1].to_string();
-    let channel = arg_vec[2].parse::<i64>()?;
+async fn add_component(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let name = args.single_quoted::<String>().unwrap();
+    let lcsc  = args.single_quoted::<String>().unwrap();
+    let channel = args.single_quoted::<i64>().unwrap();
 
     let data_read = ctx.data.read().await;
     let pool = data_read.get::<DatabasePool>().unwrap();

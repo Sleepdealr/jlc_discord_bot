@@ -232,7 +232,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             c.with_whitespace(true)
                 .on_mention(Some(bot_id))
                 .prefix(prefix)
-                .delimiters(vec![", ", ","])
+                .delimiters(vec![", ", "," , " "])
                 .owners(owners)
         })
         .before(before)
@@ -247,7 +247,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let mut client = Client::builder(&token)
         .event_handler(Handler {
-            is_loop_running: AtomicBool::new(true),
+            is_loop_running: AtomicBool::new(false),
         })
         .framework(framework)
         .await

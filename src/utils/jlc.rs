@@ -28,7 +28,7 @@ pub async fn read_datasheet_json(ctx: &Context) -> Vec<Datasheet> {
     datasheets
 }
 
-pub async fn get_jlc_stock(lcsc: &str) -> Result<(i64, String, f64), reqwest::Error> {
+pub async fn get_jlc_stock(lcsc: &str) -> Result<(i64, String, f64 , String), reqwest::Error> {
 
     let response: Value = reqwest::Client::new()
         .post("https://jlcpcb.com/shoppingCart/smtGood/selectSmtComponentList")
@@ -51,7 +51,18 @@ pub async fn get_jlc_stock(lcsc: &str) -> Result<(i64, String, f64), reqwest::Er
     let price = response["data"]["componentPageInfo"]["list"][0]["componentPrices"][0]["productPrice"]
         .as_f64()
         .unwrap();
-    Ok((jlc_stock,image_url,price))
+
+    let basic = match response["data"]["componentPageInfo"]["list"][0]["componentImageUrl"]
+        .as_str()
+        .unwrap()
+        .as_ref()
+    {
+        "base" => "(Basic)",
+        _ => "(Extended)"
+    }
+        .to_string();
+
+    Ok((jlc_stock,image_url,price, basic))
 }
 
 pub async fn print_stock_data(
@@ -93,7 +104,7 @@ pub async fn print_stock_data(
                         false,
                     );
                     e.field("Previous Stock", component.stock, false);
-                    e.field("LCSC Number", component.lcsc.as_str(), false);
+                    e.field("LCSC Number", format!("{}\n{}" , component.lcsc.as_str() , data.3), false);
                     e.field("Price", data.2, false);
                     e
                 })
