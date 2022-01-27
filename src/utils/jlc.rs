@@ -1,10 +1,10 @@
-use crate::keys::{Component};
+use crate::keys::Component;
 use chrono::Utc;
+use futures::future::join_all;
 use serde_json::Value;
 use serenity::model::id::ChannelId;
 use serenity::prelude::*;
 use std::sync::Arc;
-use futures::future::join_all;
 
 use crate::{DatabasePool, Datasheet};
 
@@ -28,8 +28,7 @@ pub async fn read_datasheet_json(ctx: &Context) -> Vec<Datasheet> {
     datasheets
 }
 
-pub async fn get_jlc_stock(lcsc: &str) -> Result<(i64, String, f64 , String), reqwest::Error> {
-
+pub async fn get_jlc_stock(lcsc: &str) -> Result<(i64, String, f64, String), reqwest::Error> {
     let response: Value = reqwest::Client::new()
         .post("https://jlcpcb.com/shoppingCart/smtGood/selectSmtComponentList")
         .json(&serde_json::json!({ "keyword": lcsc }))
@@ -48,7 +47,8 @@ pub async fn get_jlc_stock(lcsc: &str) -> Result<(i64, String, f64 , String), re
         .unwrap()
         .to_string();
 
-    let price = response["data"]["componentPageInfo"]["list"][0]["componentPrices"][0]["productPrice"]
+    let price = response["data"]["componentPageInfo"]["list"][0]["componentPrices"][0]
+        ["productPrice"]
         .as_f64()
         .unwrap();
 
@@ -58,11 +58,11 @@ pub async fn get_jlc_stock(lcsc: &str) -> Result<(i64, String, f64 , String), re
         .as_ref()
     {
         "base" => "(Basic)",
-        _ => "(Extended)"
+        _ => "(Extended)",
     }
-        .to_string();
+    .to_string();
 
-    Ok((jlc_stock,image_url,price, basic))
+    Ok((jlc_stock, image_url, price, basic))
 }
 
 pub async fn print_stock_data(
@@ -104,7 +104,11 @@ pub async fn print_stock_data(
                         false,
                     );
                     e.field("Previous Stock", component.stock, false);
-                    e.field("LCSC Number", format!("{}\n{}" , component.lcsc.as_str() , data.3), false);
+                    e.field(
+                        "LCSC Number",
+                        format!("{}\n{}", component.lcsc.as_str(), data.3),
+                        false,
+                    );
                     e.field("Price", data.2, false);
                     e
                 })
@@ -129,7 +133,7 @@ pub async fn print_stock_data(
         lcsc: component.lcsc.clone(),
         enabled: component.enabled,
         channel_id: component.channel_id,
-        role_id: component.role_id
+        role_id: component.role_id,
     };
     Ok(new)
 }
@@ -139,7 +143,10 @@ pub async fn jlc_stock_check(ctx: Arc<Context>) {
     let data_read = ctx.data.read().await;
     let pool = data_read.get::<DatabasePool>().unwrap();
 
-    let mut futures = vec![print_stock_data(Arc::clone(&ctx), component_list[0].clone())];
+    let mut futures = vec![print_stock_data(
+        Arc::clone(&ctx),
+        component_list[0].clone(),
+    )];
     futures.pop();
 
     for component in component_list {
@@ -161,7 +168,5 @@ pub async fn jlc_stock_check(ctx: Arc<Context>) {
             data.stock, data.lcsc
         );
         sqlx::query(update.as_str()).execute(pool).await.unwrap();
-
     }
-
 }

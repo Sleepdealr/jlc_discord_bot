@@ -37,7 +37,7 @@ async fn list(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 async fn add_component(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let name = args.single_quoted::<String>().unwrap();
-    let lcsc  = args.single_quoted::<String>().unwrap();
+    let lcsc = args.single_quoted::<String>().unwrap();
     let channel = args.single_quoted::<i64>().unwrap();
 
     let data_read = ctx.data.read().await;
@@ -48,7 +48,12 @@ async fn add_component(ctx: &Context, msg: &Message, mut args: Args) -> CommandR
         INSERT INTO components (name, lcsc, enabled, channel_id, stock, role_id)
         VALUES ($1 , $2 , $3 , $4 , $5 , $6)
         "#,
-        name, lcsc, true, channel, 1, 0
+        name,
+        lcsc,
+        true,
+        channel,
+        1,
+        0
     )
     .execute(pool)
     .await?;
@@ -66,18 +71,16 @@ async fn disable(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let data_read = ctx.data.read().await;
     let pool = data_read.get::<DatabasePool>().unwrap();
 
-    let statement = format!("SELECT enabled FROM components WHERE lcsc = '{}'" , lcsc);
-    let select:(bool,) = sqlx::query_as(statement.as_str())
-        .fetch_one(pool)
-        .await?;
+    let statement = format!("SELECT enabled FROM components WHERE lcsc = '{}'", lcsc);
+    let select: (bool,) = sqlx::query_as(statement.as_str()).fetch_one(pool).await?;
     let enabled = !select.0;
 
+    let update = format!(
+        "UPDATE components SET enabled={} WHERE lcsc='{}'",
+        enabled, lcsc
+    );
 
-    let update = format!("UPDATE components SET enabled={} WHERE lcsc='{}'" , enabled , lcsc);
-
-    sqlx::query(update.as_str())
-        .execute(pool)
-        .await?;
+    sqlx::query(update.as_str()).execute(pool).await?;
 
     msg.channel_id.say(&ctx.http, "Updated component").await?;
 

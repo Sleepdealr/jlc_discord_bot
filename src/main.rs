@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::time::SystemTime;
 use std::{
     collections::HashSet,
     env,
@@ -8,7 +9,6 @@ use std::{
     },
     time::Duration,
 };
-use std::time::SystemTime;
 
 use chrono::Utc;
 use log::{error, info};
@@ -124,7 +124,14 @@ struct General;
 #[owners_only]
 #[only_in(guilds)]
 #[summary = "Commands for server owners"]
-#[commands(toggle_bot, add_component, check_jlc, add_datasheet, disable)]
+#[commands(
+    toggle_bot,
+    add_component,
+    check_jlc,
+    add_datasheet,
+    disable,
+    crashandburn
+)]
 struct Owner;
 
 #[group]
@@ -232,7 +239,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             c.with_whitespace(true)
                 .on_mention(Some(bot_id))
                 .prefix(prefix)
-                .delimiters(vec![", ", "," , " "])
+                .delimiters(vec![", ", ",", " "])
                 .owners(owners)
         })
         .before(before)
