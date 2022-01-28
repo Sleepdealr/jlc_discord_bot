@@ -52,17 +52,15 @@ pub async fn get_jlc_stock(lcsc: &str) -> Result<(i64, String, f64, String), req
         .as_f64()
         .unwrap();
 
-    let resp = response["data"]["componentPageInfo"]["list"][0]["componentLibraryType"]
+    let basic = match response["data"]["componentPageInfo"]["list"][0]["componentLibraryType"]
         .as_str()
-        .unwrap();
-    dbg!(&resp);
-    let basic: String =  match resp {
+        .unwrap()
+    {
         "base" => "(Basic)",
         "expand" => "(Extended)",
         _ => "ERROR"
     }
     .to_string();
-    dbg!(&basic);
 
     Ok((jlc_stock, image_url, price, basic))
 }
