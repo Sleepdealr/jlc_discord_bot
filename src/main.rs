@@ -254,7 +254,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let mut client = Client::builder(&token)
         .event_handler(Handler {
-            is_loop_running: AtomicBool::new(false),
+            is_loop_running: AtomicBool::new(true),
         })
         .framework(framework)
         .await
