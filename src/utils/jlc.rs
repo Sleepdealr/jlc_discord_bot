@@ -77,9 +77,9 @@ pub async fn print_stock_data(
     let change = data.0 - component.stock;
     let increase = if change.is_positive() { "+" } else { "" };
     let color = if change.is_positive() {
-        0x00ff00
+        0x00ff00 // Green
     } else {
-        0xff0000
+        0xff0000 // Red
     };
 
     if data.0 != component.stock {
