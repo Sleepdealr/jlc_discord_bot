@@ -15,4 +15,4 @@ git pull
 cargo fmt
 
 # Runs cargo directly
-~/.cargo/bin/cargo run --release
+cargo run --release

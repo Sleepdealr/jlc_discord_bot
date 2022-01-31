@@ -124,5 +124,5 @@ async fn stats(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[checks(Owner)]
 async fn crashandburn(_ctx: &Context, _msg: &Message) -> CommandResult {
-    std::process::exit(0)
+    std::process::exit(1)
 }
