@@ -1,5 +1,6 @@
-use std::sync::atomic::Ordering;
-
+use crate::keys::BotCtl;
+use crate::Uptime;
+use chrono::Utc;
 use heim::{memory, process, units};
 use serenity::framework::standard::CommandOptions;
 use serenity::framework::standard::Reason;
@@ -11,16 +12,13 @@ use serenity::{
     model::channel::Message,
     prelude::*,
 };
+use std::sync::atomic::Ordering;
 use timeago;
 use tokio::time;
 
-// Commands about and to control the bot will be here
-use crate::keys::BotCtl;
-use crate::utils::general::get_uptime;
-
 #[check]
 #[name = "Owner"]
-async fn owner_check(
+pub async fn owner_check(
     _: &Context,
     msg: &Message,
     _: &mut Args,
@@ -37,6 +35,7 @@ async fn owner_check(
 #[command]
 #[only_in(guilds)]
 #[checks(Owner)]
+#[description = "Toggle bot loop"]
 async fn toggle_bot(ctx: &Context, msg: &Message) -> CommandResult {
     let data_read = ctx.data.read().await;
     let value = data_read
@@ -50,10 +49,12 @@ async fn toggle_bot(ctx: &Context, msg: &Message) -> CommandResult {
 
 #[command]
 #[only_in(guilds)]
+#[description = "Print bot stats"]
 async fn stats(ctx: &Context, msg: &Message) -> CommandResult {
     println!("Stats!");
     let bot_version = env!("CARGO_PKG_VERSION");
 
+    // Use heim to get resources
     let memory = memory::memory().await.unwrap();
     let process = process::current().await.unwrap();
     let thismem = process.memory().await.unwrap();
@@ -64,7 +65,24 @@ async fn stats(ctx: &Context, msg: &Message) -> CommandResult {
 
     let cpu_2 = process.cpu_usage().await.unwrap();
 
-    let uptime = get_uptime(&ctx).await;
+    let uptime = {
+        let data = ctx.data.read().await;
+        match data.get::<Uptime>() {
+            Some(time) => {
+                if let Some(boot_time) = time.get("boot") {
+                    let now = Utc::now();
+                    let mut f = timeago::Formatter::new();
+                    f.num_items(4);
+                    f.ago("");
+
+                    f.convert_chrono(boot_time.to_owned(), now)
+                } else {
+                    "Uptime not available".to_owned()
+                }
+            }
+            None => "Uptime not available.".to_owned(),
+        }
+    };
 
     let mut f = timeago::Formatter::new();
     f.num_items(4);

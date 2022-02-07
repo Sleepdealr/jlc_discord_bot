@@ -6,7 +6,6 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-sys-info = "0.9.0"
 chrono = "0.4.19"
 reqwest = { version = "0.11", features = ["json"] }
 serde_json = "1.0.66"
@@ -18,16 +17,14 @@ futures = "0.3.5"
 regex = "1.3.9"
 memchr = '2.3.*'
 log = "0.4.14"
-pretty_env_logger = "0.4.0"
-
 sqlx = { version = "0.5", features = [ "runtime-tokio-rustls" , "postgres"] }
 
 [dependencies.serenity]
 version = "0.10.9"
 branch = "current"
 git = "https://github.com/serenity-rs/serenity.git"
-features = ["framework", "standard_framework", "rustls_backend"]
+features = ["standard_framework", "rustls_backend"]
 
 [dependencies.tokio]
 version = "1.0"
-features = ["macros", "rt-multi-thread"]
+features = ["signal"]

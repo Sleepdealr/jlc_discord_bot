@@ -1,4 +1,5 @@
 use crate::utils::jlc::{get_components, read_datasheet_json};
+use crate::OWNER_CHECK;
 use crate::{jlc_stock_check, DatabasePool, Datasheet};
 use chrono::Utc;
 use serenity::{
@@ -8,11 +9,21 @@ use serenity::{
 };
 use std::sync::Arc;
 
-#[command]
-async fn list(ctx: &Context, msg: &Message) -> CommandResult {
-    let component_list = get_components(ctx).await;
+#[command("list")]
+#[sub_commands(components, datasheets)]
+async fn list_upper(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    msg.reply(&ctx.http, "Specify either components or datasheets")
+        .await?;
+    Ok(())
+}
 
-    let mut name_list: String = "".to_string();
+#[command]
+#[aliases("c")]
+#[description("Display current component list")]
+async fn components(ctx: &Context, msg: &Message) -> CommandResult {
+    let component_list = get_components(ctx).await; // Components list from DB
+
+    let mut name_list: String = "".to_string(); // String with newlines to contain all Components
     for component in component_list {
         name_list.push_str(component.name.as_str());
         name_list.push_str("\n");
@@ -35,72 +46,16 @@ async fn list(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
-async fn add_component(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let name = args.single_quoted::<String>().unwrap();
-    let lcsc = args.single_quoted::<String>().unwrap();
-    let channel = args.single_quoted::<i64>().unwrap();
-
-    let data_read = ctx.data.read().await;
-    let pool = data_read.get::<DatabasePool>().unwrap();
-
-    sqlx::query!(
-        r#"
-        INSERT INTO components (name, lcsc, enabled, channel_id, stock, role_id)
-        VALUES ($1 , $2 , $3 , $4 , $5 , $6)
-        "#,
-        name,
-        lcsc,
-        true,
-        channel,
-        1,
-        0
-    )
-    .execute(pool)
-    .await?;
-
-    msg.channel_id.say(&ctx.http, "Created component").await?;
-
-    Ok(())
-}
-
-#[command]
-async fn disable(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    let arg_vec: Vec<_> = args.rest().split_whitespace().collect();
-    let lcsc = arg_vec[0].to_string();
-
-    let data_read = ctx.data.read().await;
-    let pool = data_read.get::<DatabasePool>().unwrap();
-
-    let statement = format!("SELECT enabled FROM components WHERE lcsc = '{}'", lcsc);
-    let select: (bool,) = sqlx::query_as(statement.as_str()).fetch_one(pool).await?;
-    let enabled = !select.0;
-
-    let update = format!(
-        "UPDATE components SET enabled={} WHERE lcsc='{}'",
-        enabled, lcsc
-    );
-
-    sqlx::query(update.as_str()).execute(pool).await?;
-
-    msg.channel_id.say(&ctx.http, "Updated component").await?;
-
-    Ok(())
-}
-
-#[command]
-async fn check_jlc(ctx: &Context, _msg: &Message) -> CommandResult {
-    let arc = ctx.clone();
-    jlc_stock_check(Arc::new(arc)).await;
-    Ok(())
-}
-
-#[command]
+#[aliases("d")]
+#[description("Display current datasheet list")]
 async fn datasheets(ctx: &Context, msg: &Message) -> CommandResult {
-    let datasheet_list: Vec<Datasheet> = read_datasheet_json(ctx).await;
+    let datasheet_list: Vec<Datasheet> = read_datasheet_json(ctx).await; // Datasheet list from DB
     let mut embed_list: String = "".to_string();
+
+    // Format all datasheets and push onto sting for printing
     for datasheet in datasheet_list {
         embed_list.push_str(&format!(
-            "[{text}]({url})\n",
+            "[{text}]({url})\n", // Formatting for discord links is same as markdown
             text = datasheet.name,
             url = datasheet.link
         ));
@@ -122,7 +77,55 @@ async fn datasheets(ctx: &Context, msg: &Message) -> CommandResult {
     Ok(())
 }
 
+#[command("add")]
+#[sub_commands(add_component, add_datasheet)]
+async fn add_upper(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    // This isn't supposed to be calls so just returns usage
+    msg.reply(&ctx.http, "Specify either components or datasheets")
+        .await?;
+    Ok(())
+}
+
+#[command("add")]
+#[description("Add component to the database")]
+#[aliases("c")]
+#[num_args(3)]
+#[checks(Owner)]
+async fn add_component(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    // Read passed arguments
+    // Single quoted allows bot to read arguments with spaces when in quotes
+    let name = args.single_quoted::<String>().unwrap();
+    let lcsc = args.single_quoted::<String>().unwrap();
+    let channel = args.single_quoted::<i64>().unwrap();
+
+    let data_read = ctx.data.read().await;
+    let pool = data_read.get::<DatabasePool>().unwrap();
+    // Insert
+    sqlx::query!(
+        r#"
+        INSERT INTO components (name, lcsc, enabled, channel_id, stock, role_id)
+        VALUES ($1 , $2 , $3 , $4 , $5 , $6)
+        "#,
+        name,
+        lcsc,
+        true,
+        channel,
+        1,
+        0
+    )
+    .execute(pool)
+    .await?;
+
+    msg.channel_id.say(&ctx.http, "Created component").await?;
+
+    Ok(())
+}
+
 #[command]
+#[aliases("d")]
+#[num_args(2)]
+#[description("Add datasheet to the database")]
+#[checks(Owner)]
 async fn add_datasheet(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let arg_vec: Vec<_> = args.rest().split_whitespace().collect();
     let name = arg_vec[0].to_string();
@@ -143,5 +146,40 @@ async fn add_datasheet(ctx: &Context, msg: &Message, args: Args) -> CommandResul
     .await?;
 
     msg.channel_id.say(&ctx.http, "Added datasheet").await?;
+    Ok(())
+}
+
+#[command]
+#[description("Disable a component")]
+#[num_args(1)]
+#[checks(Owner)]
+async fn disable(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let lcsc = args.single_quoted::<String>().unwrap();
+
+    let data_read = ctx.data.read().await;
+    let pool = data_read.get::<DatabasePool>().unwrap();
+
+    let statement = format!("SELECT enabled FROM components WHERE lcsc = '{}'", lcsc);
+    let select: (bool,) = sqlx::query_as(statement.as_str()).fetch_one(pool).await?;
+    let enabled = !select.0;
+
+    let update = format!(
+        "UPDATE components SET enabled={} WHERE lcsc='{}'",
+        enabled, lcsc
+    );
+
+    sqlx::query(update.as_str()).execute(pool).await?;
+
+    msg.channel_id.say(&ctx.http, "Updated component").await?;
+
+    Ok(())
+}
+
+#[command]
+#[checks(Owner)]
+#[description("Manually trigger JLC stock check")]
+async fn check(ctx: &Context, _msg: &Message) -> CommandResult {
+    let arc = ctx.clone();
+    jlc_stock_check(Arc::new(arc)).await;
     Ok(())
 }

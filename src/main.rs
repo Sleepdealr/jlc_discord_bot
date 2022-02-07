@@ -117,21 +117,19 @@ impl EventHandler for Handler {
 }
 
 #[group]
-#[commands(echo, list, stats, iam, iamnot, datasheets)]
+#[commands(echo, stats, iam, iamnot)]
 struct General;
+
+#[group]
+#[prefix = "jlc"]
+#[commands(list_upper, add_upper, check)]
+struct JLC;
 
 #[group]
 #[owners_only]
 #[only_in(guilds)]
 #[summary = "Commands for server owners"]
-#[commands(
-    toggle_bot,
-    add_component,
-    check_jlc,
-    add_datasheet,
-    disable,
-    crashandburn
-)]
+#[commands(toggle_bot, add_datasheet, disable, crashandburn)]
 struct Owner;
 
 #[group]
@@ -239,7 +237,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             c.with_whitespace(true)
                 .on_mention(Some(bot_id))
                 .prefix(prefix)
-                .delimiters(vec![", ", ",", " "])
+                .delimiters(vec![", ", ",", " "]) // Extra delimiters for wonky quotation marks
                 .owners(owners)
         })
         .before(before)
@@ -250,7 +248,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .help(&MY_HELP)
         .group(&GENERAL_GROUP)
         .group(&OWNER_GROUP)
-        .group(&MODERATION_GROUP);
+        .group(&MODERATION_GROUP)
+        .group(&JLC_GROUP);
 
     let mut client = Client::builder(&token)
         .event_handler(Handler {
@@ -264,12 +263,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut data = client.data.write().await;
         data.insert::<BotCtl>(AtomicBool::new(true));
 
+        // Only have to connect to postgres once
         let pg_pool = obtain_postgres_pool().await?;
         data.insert::<DatabasePool>(pg_pool.clone());
 
         data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager));
         data.insert::<keys::Uptime>(HashMap::default());
     }
+
+    let shard_manager = client.shard_manager.clone();
+    // CTRL+C handler
+    tokio::spawn(async move {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("Could not register ctrl+c handler");
+        shard_manager.lock().await.shutdown_all().await;
+    });
 
     if let Err(why) = client.start().await {
         println!("Client error: {:?}", why);

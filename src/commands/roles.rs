@@ -7,6 +7,7 @@ use serenity::{
 };
 
 #[command]
+#[description = "Set role"]
 async fn iam(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let arg_role = args.single_quoted::<String>()?;
     if let Some(guild_id) = msg.guild_id {
@@ -25,6 +26,7 @@ async fn iam(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 }
 
 #[command]
+#[description = "Remove role"]
 async fn iamnot(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let arg_role = args.single_quoted::<String>()?;
     if let Some(guild_id) = msg.guild_id {
