@@ -13,6 +13,13 @@ pub enum JLCRequestErr {
     DataNotAvail
 }
 
+pub struct ComponentData {
+    stock: i64,
+    image_url: String,
+    price: f64,
+    basic: String
+}
+
 pub async fn get_components(ctx: &Context) -> Vec<Component> {
     // Read database pool from ctx and run a simple select * for components
     let data_read = ctx.data.read().await;
@@ -35,7 +42,7 @@ pub async fn read_datasheet_json(ctx: &Context) -> Vec<Datasheet> {
     datasheets
 }
 
-pub async fn get_jlc_stock(lcsc: &str) -> Result<(i64, String, f64, String), JLCRequestErr> {
+pub async fn get_jlc_stock(lcsc: &str) -> Result<ComponentData, JLCRequestErr> {
     // Ping API for component and parse into serde JSON
     let response: Value = reqwest::Client::new()
         .post("https://jlcpcb.com/shoppingCart/smtGood/selectSmtComponentList")
@@ -45,13 +52,12 @@ pub async fn get_jlc_stock(lcsc: &str) -> Result<(i64, String, f64, String), JLC
         .map_err(JLCRequestErr::ReqwestError)?
         .json()
         .await
-        .map_err(JLCRequestErr::ReqwestError)?;
+        .map_err(JLCRequestErr::ReqwestError)?; // Have to map to error enum to use ?
 
     let jlc_stock = response["data"]["componentPageInfo"]["list"][0]["stockCount"]
         .as_i64()
-        .ok_or(JLCRequestErr::DataNotAvail)?;
+        .ok_or(JLCRequestErr::DataNotAvail)?; // ok_or converts into a Result with the DataNotAvail Err, which gets unwrapped into the final value by the ?
 
-    // Error handling on image isn't necessary since it should have one if it has stock ??
     let image_url = response["data"]["componentPageInfo"]["list"][0]["componentImageUrl"]
         .as_str()
         .ok_or(JLCRequestErr::DataNotAvail)?
@@ -73,9 +79,13 @@ pub async fn get_jlc_stock(lcsc: &str) -> Result<(i64, String, f64, String), JLC
     }
     .to_string();
 
-    // Return all values as tuple instead of list because it's easier
-    // If I wanted to use a vec I would need to create an enum with all the possible types which is inconvenient for just one function
-    Ok((jlc_stock, image_url, price, basic))
+
+    Ok(ComponentData {
+        stock: jlc_stock,
+        image_url,
+        price,
+        basic
+    })
 }
 
 pub async fn print_stock_data(
@@ -90,8 +100,12 @@ pub async fn print_stock_data(
     };
 
     // Difference between new data(data.0) and prev data
-    let change = data.0 - component.stock;
+    let change = data.stock - component.stock;
+
+
+
     let increase = if change.is_positive() { "+" } else { "" };
+
     let color = serenity::utils::Colour(if change.is_positive() {
         0x00ff00 // Green
     } else {
@@ -108,13 +122,13 @@ pub async fn print_stock_data(
                         component.lcsc
                     ));
                     e.colour(color);
-                    e.thumbnail(&data.1);
+                    e.thumbnail(&data.image_url);
                     e.timestamp(&Utc::now());
                     e.field(
                         "Stock",
                         format!(
                             "{stock} ({increase}{value})",
-                            stock = data.0,
+                            stock = data.stock,
                             value = change,
                             increase = increase
                         ),
@@ -123,10 +137,10 @@ pub async fn print_stock_data(
                     e.field("Previous Stock", component.stock, false);
                     e.field(
                         "LCSC Number",
-                        format!("{}\n{}", component.lcsc.as_str(), data.3),
+                        format!("{}\n{}", component.lcsc.as_str(), data.basic),
                         false,
                     );
-                    e.field("Price", data.2, false);
+                    e.field("Price", data.price, false);
                     e
                 })
             })
@@ -136,7 +150,7 @@ pub async fn print_stock_data(
         };
     }
     // Check if role needs to be pinged
-    if component.stock == 0 && data.0 > 0 && component.role_id != 0 {
+    if component.stock == 0 && data.stock > 0 && component.role_id != 0 {
         ChannelId(component.channel_id as u64)
             .say(&ctx.http, format!("<@&{}>", component.role_id))
             .await
@@ -146,7 +160,7 @@ pub async fn print_stock_data(
 
     // Create component struct out of new and old info
     Ok(Component {
-        stock: data.0,
+        stock: data.stock,
         name: component.name.clone(),
         lcsc: component.lcsc.clone(),
         enabled: component.enabled,
