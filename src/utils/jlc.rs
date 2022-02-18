@@ -8,9 +8,9 @@ use std::sync::Arc;
 
 use crate::{DatabasePool, Datasheet};
 
-enum JLCRequestErr {
+pub enum JLCRequestErr {
     ReqwestError(reqwest::Error),
-    BadUnwrapErr(String)
+    DataNotAvail
 }
 
 pub async fn get_components(ctx: &Context) -> Vec<Component> {
@@ -49,23 +49,23 @@ pub async fn get_jlc_stock(lcsc: &str) -> Result<(i64, String, f64, String), JLC
 
     let jlc_stock = response["data"]["componentPageInfo"]["list"][0]["stockCount"]
         .as_i64()
-        .unwrap();
+        .ok_or(JLCRequestErr::DataNotAvail)?;
 
     // Error handling on image isn't necessary since it should have one if it has stock ??
     let image_url = response["data"]["componentPageInfo"]["list"][0]["componentImageUrl"]
         .as_str()
-        .unwrap()
+        .ok_or(JLCRequestErr::DataNotAvail)?
         .to_string();
 
     let price = response["data"]["componentPageInfo"]["list"][0]["componentPrices"][0]
         ["productPrice"]
         .as_f64()
-        .unwrap();
+        .ok_or(JLCRequestErr::DataNotAvail)?;
 
     // JLC has basic as "base" for some reason
     let basic = match response["data"]["componentPageInfo"]["list"][0]["componentLibraryType"]
         .as_str()
-        .unwrap()
+        .ok_or(JLCRequestErr::DataNotAvail)?
     {
         "base" => "(Basic)",
         "expand" => "(Extended)",
