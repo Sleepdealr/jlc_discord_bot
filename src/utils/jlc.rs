@@ -8,6 +8,11 @@ use std::sync::Arc;
 
 use crate::{DatabasePool, Datasheet};
 
+enum JLCRequestErr {
+    ReqwestError(reqwest::Error),
+    BadUnwrapErr(String)
+}
+
 pub async fn get_components(ctx: &Context) -> Vec<Component> {
     // Read database pool from ctx and run a simple select * for components
     let data_read = ctx.data.read().await;
@@ -30,21 +35,23 @@ pub async fn read_datasheet_json(ctx: &Context) -> Vec<Datasheet> {
     datasheets
 }
 
-pub async fn get_jlc_stock(lcsc: &str) -> Result<(i64, String, f64, String), reqwest::Error> {
+pub async fn get_jlc_stock(lcsc: &str) -> Result<(i64, String, f64, String), JLCRequestErr> {
     // Ping API for component and parse into serde JSON
     let response: Value = reqwest::Client::new()
         .post("https://jlcpcb.com/shoppingCart/smtGood/selectSmtComponentList")
         .json(&serde_json::json!({ "keyword": lcsc }))
         .send()
-        .await?
+        .await
+        .map_err(JLCRequestErr::ReqwestError)?
         .json()
-        .await?;
+        .await
+        .map_err(JLCRequestErr::ReqwestError)?;
 
     let jlc_stock = response["data"]["componentPageInfo"]["list"][0]["stockCount"]
         .as_i64()
         .unwrap();
 
-    // Error handling on image isn't necessary since it should have one if it has stock
+    // Error handling on image isn't necessary since it should have one if it has stock ??
     let image_url = response["data"]["componentPageInfo"]["list"][0]["componentImageUrl"]
         .as_str()
         .unwrap()
@@ -74,7 +81,7 @@ pub async fn get_jlc_stock(lcsc: &str) -> Result<(i64, String, f64, String), req
 pub async fn print_stock_data(
     ctx: Arc<Context>,
     component: Component,
-) -> Result<Component, reqwest::Error> {
+) -> Result<Component, JLCRequestErr> {
     let request = get_jlc_stock(&component.lcsc).await;
     // Error returned if unwrapped on a bad value
     let data = match request {
@@ -85,11 +92,11 @@ pub async fn print_stock_data(
     // Difference between new data(data.0) and prev data
     let change = data.0 - component.stock;
     let increase = if change.is_positive() { "+" } else { "" };
-    let color = if change.is_positive() {
+    let color = serenity::utils::Colour(if change.is_positive() {
         0x00ff00 // Green
     } else {
         0xff0000 // Red
-    };
+    });
 
     // Only run if stock has changed
     if change != 0 {
