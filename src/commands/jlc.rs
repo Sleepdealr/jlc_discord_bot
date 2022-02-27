@@ -100,21 +100,10 @@ async fn add_component(ctx: &Context, msg: &Message, mut args: Args) -> CommandR
 
     let data_read = ctx.data.read().await;
     let pool = data_read.get::<DatabasePool>().unwrap();
-    // Insert
-    sqlx::query!(
-        r#"
-        INSERT INTO components (name, lcsc, enabled, channel_id, stock, role_id)
-        VALUES ($1 , $2 , $3 , $4 , $5 , $6)
-        "#,
-        name,
-        lcsc,
-        true,
-        channel,
-        1,
-        0
-    )
-    .execute(pool)
-    .await?;
+
+    let query = format!("INSERT INTO components (name, lcsc, enabled, channel_id, stock, role_id)\
+    VALUES ({}, {}, {}, {}, {}, {})" ,  name, lcsc, true, channel, 1, 0);
+    sqlx::query(query.as_str()).execute(pool).await?;
 
     msg.channel_id.say(&ctx.http, "Created component").await?;
 
@@ -134,16 +123,8 @@ async fn add_datasheet(ctx: &Context, msg: &Message, args: Args) -> CommandResul
     let data_read = ctx.data.read().await;
     let pool = data_read.get::<DatabasePool>().unwrap();
 
-    sqlx::query!(
-        r#"
-        INSERT INTO datasheets (name, link)
-        VALUES ($1 , $2)
-        "#,
-        name,
-        link
-    )
-    .execute(pool)
-    .await?;
+    let query = format!("INSERT INTO datasheets (name, link) VALUES ({} , {})" , name, link);
+    sqlx::query(query.as_str()).execute(pool).await?;
 
     msg.channel_id.say(&ctx.http, "Added datasheet").await?;
     Ok(())

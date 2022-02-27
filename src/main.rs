@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::time::SystemTime;
 use std::{
     collections::HashSet,
     env,
@@ -7,10 +6,10 @@ use std::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
-    time::Duration,
+    time::{SystemTime, Duration},
 };
 
-use chrono::Utc;
+use chrono::{Local, TimeZone, Utc};
 use log::{error, info};
 use serenity::model::event::ResumedEvent;
 use serenity::{
@@ -28,6 +27,7 @@ use serenity::{
     },
     prelude::*,
 };
+use serenity::model::prelude::ChannelId;
 
 use crate::utils::database::obtain_postgres_pool;
 use commands::general::*;
@@ -60,7 +60,7 @@ impl EventHandler for Handler {
             tokio::spawn(async move {
                 // Loop will execute once on startup and THEN sleep for necessary time
                 loop {
-                    let data_read = ctx.data.read().await;
+                    let data_read = ctx1.data.read().await;
                     if data_read
                         .get::<BotCtl>()
                         .expect("Expected bot toggle")
@@ -86,6 +86,27 @@ impl EventHandler for Handler {
                     tokio::time::sleep(Duration::from_secs(duration)).await;
                 }
             });
+
+            let ctx2 = Arc::clone(&ctx);
+            tokio::spawn(async move {
+                loop {
+                    let start = Local.ymd(2022, 2, 24);
+                    let current_date = Local::now().date();
+                    let days_since_start = current_date.signed_duration_since(start).num_days();
+                    if days_since_start % 5 == 0 {
+                        if let Err(why) = ChannelId(947625085903183902).send_message(
+                           &ctx2 ,
+                           |m|
+                               m.content("<@236222353405640704> :syringe: take your meds :syringe:")
+                        ).await {
+                            eprintln!("Error sending message: {:?}", why);
+                        };
+                    }
+                    tokio::time::sleep(Duration::from_secs(432000)).await; // 5 days
+
+                }
+            });
+
             self.is_loop_running.swap(true, Ordering::Relaxed);
         }
     }
