@@ -91,7 +91,7 @@ impl EventHandler for Handler {
             tokio::spawn(async move {
 
                 loop {
-                    let now = chrono::Local::now();
+                    let mut now = chrono::Local::now();
                     let mut exe_time = (now).date().and_hms(10, 0, 0); // Possible HH:MM:SS today, Could be BEFORE now
                     if exe_time < now {
                         // If date is before now, the duration_since method will fail, because Durations cannot be negative
@@ -103,11 +103,11 @@ impl EventHandler for Handler {
                         .unwrap()
                         .as_secs();
                     println!("Sleeping for {}s", duration);
-                    tokio::time::sleep(Duration::from_secs(duration)).await;
+                    tokio::time::sleep(Duration::from_secs(duration)).await; // Only checks once per day
 
-                    let start = Local.ymd(2022, 3, 2);
-                    let current_date = Local::now().date();
-                    let days_since_start = current_date.signed_duration_since(start).num_days();
+                    let start = Local.ymd(2022, 3, 2).and_hms(0,0,0);
+                    now = chrono::Local::now();
+                    let days_since_start = now.signed_duration_since(start).num_days();
                     if days_since_start % 5 == 0 {
                         if let Err(why) = ChannelId(947625085903183902).send_message(
                            &ctx2 ,
@@ -117,8 +117,6 @@ impl EventHandler for Handler {
                             eprintln!("Error sending message: {:?}", why);
                         };
                     }
-                   5 days
-
                 }
             });
 
