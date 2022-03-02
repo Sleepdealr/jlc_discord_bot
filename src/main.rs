@@ -89,21 +89,22 @@ impl EventHandler for Handler {
 
             let ctx2 = Arc::clone(&ctx);
             tokio::spawn(async move {
-                let now = chrono::Local::now();
-                let mut exe_time = (now).date().and_hms(10, 0, 0); // Possible HH:MM:SS today, Could be BEFORE now
-                if exe_time < now {
-                    // If date is before now, the duration_since method will fail, because Durations cannot be negative
-                    exe_time = exe_time + chrono::Duration::days(1); // Add 1 day to the exe_time to get next possible time
-                }
-                let duration = exe_time
-                    .signed_duration_since(now)
-                    .to_std()
-                    .unwrap()
-                    .as_secs();
-                println!("Sleeping for {}s", duration);
-                tokio::time::sleep(Duration::from_secs(duration)).await;
 
                 loop {
+                    let now = chrono::Local::now();
+                    let mut exe_time = (now).date().and_hms(10, 0, 0); // Possible HH:MM:SS today, Could be BEFORE now
+                    if exe_time < now {
+                        // If date is before now, the duration_since method will fail, because Durations cannot be negative
+                        exe_time = exe_time + chrono::Duration::days(1); // Add 1 day to the exe_time to get next possible time
+                    }
+                    let duration = exe_time
+                        .signed_duration_since(now)
+                        .to_std()
+                        .unwrap()
+                        .as_secs();
+                    println!("Sleeping for {}s", duration);
+                    tokio::time::sleep(Duration::from_secs(duration)).await;
+
                     let start = Local.ymd(2022, 3, 2);
                     let current_date = Local::now().date();
                     let days_since_start = current_date.signed_duration_since(start).num_days();
@@ -116,7 +117,7 @@ impl EventHandler for Handler {
                             eprintln!("Error sending message: {:?}", why);
                         };
                     }
-                    tokio::time::sleep(Duration::from_secs(432000)).await; // 5 days
+                   5 days
 
                 }
             });
