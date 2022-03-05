@@ -102,7 +102,7 @@ async fn add_component(ctx: &Context, msg: &Message, mut args: Args) -> CommandR
     let pool = data_read.get::<DatabasePool>().unwrap();
 
     let query = format!("INSERT INTO components (name, lcsc, enabled, channel_id, stock, role_id)\
-    VALUES ('{}', '{}', {}, {}, {}, {})", name, lcsc_number, true, channel, 1, 0);
+    VALUES ('{}', '{}', {}, {}, {}, {})", name, lcsc, true, channel, 1, 0);
     sqlx::query(query.as_str()).execute(pool).await?;
 
     msg.channel_id.say(&ctx.http, "Created component").await?;
