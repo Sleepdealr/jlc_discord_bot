@@ -102,7 +102,7 @@ async fn add_component(ctx: &Context, msg: &Message, mut args: Args) -> CommandR
     let pool = data_read.get::<DatabasePool>().unwrap();
 
     let query = format!("INSERT INTO components (name, lcsc, enabled, channel_id, stock, role_id)\
-    VALUES ({}, {}, {}, {}, {}, {})" ,  name, lcsc, true, channel, 1, 0);
+    VALUES ('{}', '{}', {}, {}, {}, {})", name, lcsc_number, true, channel, 1, 0);
     sqlx::query(query.as_str()).execute(pool).await?;
 
     msg.channel_id.say(&ctx.http, "Created component").await?;
@@ -115,15 +115,14 @@ async fn add_component(ctx: &Context, msg: &Message, mut args: Args) -> CommandR
 #[num_args(2)]
 #[description("Add datasheet to the database")]
 #[checks(Owner)]
-async fn add_datasheet(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    let arg_vec: Vec<_> = args.rest().split_whitespace().collect();
-    let name = arg_vec[0].to_string();
-    let link = arg_vec[1].to_string();
+async fn add_datasheet(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let name = args.single_quoted::<String>().unwrap();
+    let link = args.single_quoted::<String>().unwrap();
 
     let data_read = ctx.data.read().await;
     let pool = data_read.get::<DatabasePool>().unwrap();
 
-    let query = format!("INSERT INTO datasheets (name, link) VALUES ({} , {})" , name, link);
+    let query = format!("INSERT INTO datasheets (name, link) VALUES ('{}' , '{}')" , name, link);
     sqlx::query(query.as_str()).execute(pool).await?;
 
     msg.channel_id.say(&ctx.http, "Added datasheet").await?;
