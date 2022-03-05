@@ -1,4 +1,4 @@
-use crate::utils::jlc::{get_components, read_datasheet_json};
+use crate::utils::jlc::{get_components, get_datasheets};
 use crate::OWNER_CHECK;
 use crate::{jlc_stock_check, DatabasePool, Datasheet};
 use chrono::Utc;
@@ -49,7 +49,7 @@ async fn components(ctx: &Context, msg: &Message) -> CommandResult {
 #[aliases("d")]
 #[description("Display current datasheet list")]
 async fn datasheets(ctx: &Context, msg: &Message) -> CommandResult {
-    let datasheet_list: Vec<Datasheet> = read_datasheet_json(ctx).await; // Datasheet list from DB
+    let datasheet_list: Vec<Datasheet> = get_datasheets(ctx).await; // Datasheet list from DB
     let mut embed_list: String = "".to_string();
 
     // Format all datasheets and push onto sting for printing
