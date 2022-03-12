@@ -70,7 +70,7 @@ impl EventHandler for Handler {
                         jlc_stock_check(Arc::clone(&ctx1)).await;
                         println!("Stock check took {}ms", now.elapsed().unwrap().as_millis());
                     }
-                    tokio::time::sleep(Duration::from_secs(120)); // Idk what's causing it so I'm gonna put a sleep just in case
+                    tokio::time::sleep(Duration::from_secs(120)).await; // Idk what's causing it so I'm gonna put a sleep just in case
 
                     let now = chrono::Local::now();
                     let mut exe_time = (now).date().and_hms(10, 0, 0); // Possible HH:MM:SS today, Could be BEFORE now
@@ -117,7 +117,7 @@ impl EventHandler for Handler {
                             eprintln!("Error sending message: {:?}", why);
                         };
                     }
-                    tokio::time::sleep(Duration::from_secs(120)); // Idk what's causing it so I'm gonna put a sleep just in case
+                    tokio::time::sleep(Duration::from_secs(120)).await; // Idk what's causing it so I'm gonna put a sleep just in case
                 }
             });
 
