@@ -1,23 +1,24 @@
 use crate::keys::Component;
 use chrono::Utc;
 use futures::future::join_all;
+use log::error;
 use serde_json::Value;
 use serenity::model::id::ChannelId;
 use serenity::prelude::*;
 use std::sync::Arc;
 
 use crate::{DatabasePool, Datasheet};
-
+#[derive(Debug)]
 pub enum JLCRequestErr {
     ReqwestError(reqwest::Error),
-    DataNotAvail
+    DataNotAvail,
 }
 
 pub struct ComponentData {
     stock: i64,
     image_url: String,
     price: f64,
-    basic: String
+    basic: String,
 }
 
 pub async fn get_components(ctx: &Context) -> Vec<Component> {
@@ -54,20 +55,19 @@ pub async fn get_jlc_stock(lcsc: &str) -> Result<ComponentData, JLCRequestErr> {
         .await
         .map_err(JLCRequestErr::ReqwestError)?; // Have to map to error enum to use ?
 
-
     let jlc_stock = response["data"]["componentPageInfo"]["list"][0]["stockCount"]
         .as_i64()
         .ok_or(JLCRequestErr::DataNotAvail)?; // ok_or converts into a Result with the DataNotAvail Err, which gets unwrapped into the final value by the ?
 
     let url = &response["data"]["componentPageInfo"]["list"][0]["componentImageUrl"];
     let mut image_url = "".to_string();
-    if !url.is_null(){ // Because it can be null for some godforsaken reason
-        image_url = url.as_str()
-            .ok_or(JLCRequestErr::DataNotAvail)?
-            .to_string();
+    if !url.is_null() {
+        // Because it can be null for some godforsaken reason
+        image_url = url.as_str().ok_or(JLCRequestErr::DataNotAvail)?.to_string();
     }
 
-    let price = response["data"]["componentPageInfo"]["list"][0]["componentPrices"][0]["productPrice"]
+    let price = response["data"]["componentPageInfo"]["list"][0]["componentPrices"][0]
+        ["productPrice"]
         .as_f64()
         .ok_or(JLCRequestErr::DataNotAvail)?;
 
@@ -86,7 +86,7 @@ pub async fn get_jlc_stock(lcsc: &str) -> Result<ComponentData, JLCRequestErr> {
         stock: jlc_stock,
         image_url,
         price,
-        basic
+        basic,
     })
 }
 
@@ -103,8 +103,6 @@ pub async fn print_stock_data(
 
     // Difference between new data(data.0) and prev data
     let change = data.stock - component.stock;
-
-
 
     let increase = if change.is_positive() { "+" } else { "" };
 
@@ -200,7 +198,10 @@ pub async fn jlc_stock_check(ctx: Arc<Context>) {
     for result in results {
         let data = match result {
             Ok(data) => data,
-            Err(_err) => continue,
+            Err(err) => {
+                error!("ERR: {:?}", err);
+                continue;
+            }
         };
 
         println!("Sent stock for {}, Stock:{}", data.name, data.stock);
@@ -209,6 +210,7 @@ pub async fn jlc_stock_check(ctx: Arc<Context>) {
             "UPDATE components SET stock = {} WHERE lcsc='{}'",
             data.stock, data.lcsc
         );
+
         sqlx::query(update.as_str()).execute(pool).await.unwrap();
     }
 }
