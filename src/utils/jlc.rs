@@ -45,9 +45,9 @@ pub async fn get_datasheets(ctx: &Context) -> Vec<Datasheet> {
 
 pub async fn get_jlc_stock(lcsc: &str) -> Result<ComponentData, JLCRequestErr> {
     // Ping API for component and parse into serde JSON
+
     let response: Value = reqwest::Client::new()
-        .post("https://jlcpcb.com/shoppingCart/smtGood/selectSmtComponentList")
-        .json(&serde_json::json!({ "keyword": lcsc }))
+        .get(format!("https://jlcpcb.com/api/overseas-smt/web/component/getComponentDetail?componentCode={}" , lcsc).as_str())
         .send()
         .await
         .map_err(JLCRequestErr::ReqwestError)?
@@ -55,24 +55,23 @@ pub async fn get_jlc_stock(lcsc: &str) -> Result<ComponentData, JLCRequestErr> {
         .await
         .map_err(JLCRequestErr::ReqwestError)?; // Have to map to error enum to use ?
 
-    let jlc_stock = response["data"]["componentPageInfo"]["list"][0]["stockCount"]
+    let jlc_stock = response["data"]["stockCount"]
         .as_i64()
         .ok_or(JLCRequestErr::DataNotAvail)?; // ok_or converts into a Result with the DataNotAvail Err, which gets unwrapped into the final value by the ?
 
-    let url = &response["data"]["componentPageInfo"]["list"][0]["componentImageUrl"];
+    let url = &response["data"]["componentImageUrl"];
     let mut image_url = "".to_string();
     if !url.is_null() {
         // Because it can be null for some godforsaken reason
         image_url = url.as_str().ok_or(JLCRequestErr::DataNotAvail)?.to_string();
     }
 
-    let price = response["data"]["componentPageInfo"]["list"][0]["componentPrices"][0]
-        ["productPrice"]
+    let price = response["data"]["prices"][0]["productPrice"]
         .as_f64()
         .ok_or(JLCRequestErr::DataNotAvail)?;
 
     // JLC has basic as "base" for some reason
-    let basic = match response["data"]["componentPageInfo"]["list"][0]["componentLibraryType"]
+    let basic = match response["data"]["componentLibraryType"]
         .as_str()
         .ok_or(JLCRequestErr::DataNotAvail)?
     {
