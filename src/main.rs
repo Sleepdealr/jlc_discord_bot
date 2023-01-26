@@ -9,10 +9,9 @@ use std::{
     time::{Duration, SystemTime},
 };
 
-use chrono::{Local, TimeZone, Utc};
+use chrono::Utc;
 use log::{error, info};
 use serenity::model::event::ResumedEvent;
-use serenity::model::prelude::ChannelId;
 use serenity::{
     async_trait,
     framework::standard::{
@@ -85,39 +84,6 @@ impl EventHandler for Handler {
                         .as_secs();
                     println!("Sleeping for {}s", duration);
                     tokio::time::sleep(Duration::from_secs(duration)).await;
-                }
-            });
-
-            let ctx2 = Arc::clone(&ctx);
-            tokio::spawn(async move {
-                loop {
-                    let mut now = chrono::Local::now();
-                    let mut exe_time = (now).date().and_hms(6, 0, 0); // Possible HH:MM:SS today, Could be BEFORE now
-                    if now.date().and_hms(6, 0, 0) < now {
-                        // If date is before now, the duration_since method will fail, because Durations cannot be negative
-                        exe_time = exe_time + chrono::Duration::days(1); // Add 1 day to the exe_time to get next possible time
-                    }
-                    let duration = exe_time
-                        .signed_duration_since(now)
-                        .to_std()
-                        .unwrap()
-                        .as_secs();
-                    println!("Sleeping for {}s", duration);
-                    tokio::time::sleep(Duration::from_secs(duration)).await; // Only checks once per day, instead of every 5 days
-
-                    let start = Local.ymd(2022, 3, 2).and_hms(0, 0, 0); // First day
-                    now = chrono::Local::now(); // Current time after sleep
-                    let days_since_start = now.signed_duration_since(start).num_days();
-                    if days_since_start % 5 == 0 {
-                        if let Err(why) = ChannelId(947625085903183902).send_message(
-                           &ctx2 ,
-                           |m|
-                               m.content("<@236222353405640704> <@360807598837989377> :syringe: :syringe:") // @Sleep + @Ella 💉 💉
-                        ).await {
-                            eprintln!("Error sending message: {:?}", why);
-                        };
-                    }
-                    tokio::time::sleep(Duration::from_secs(120)).await; // Idk what's causing it so I'm gonna put a sleep just in case
                 }
             });
 
